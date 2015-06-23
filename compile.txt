@@ -1,0 +1,1 @@
+mpicc -I/usr/include/gsl -L/usr/local/lib nanotube.c main.c -o main -lgsl -lgslcblas -lm

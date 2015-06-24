@@ -15,19 +15,22 @@ int main(int argc, char *argv[]) {
    * World Variables
    */
   double side_length = 1;
-  int n_bin_side = 10; //per side 
+  int n_bin_side = 15; //per side 
   int TIME = 100;
   int DIM = 3;
   int faces = n_bin_side*n_bin_side;
   double interval = side_length / ((double)n_bin_side);
 
-  int Times[] = {1500,1700,1900};
-  int Rates[] = {1,1,1};
+  int Times[] = {0,1,99};//{199,299,399};
+  int Rates[] = {3,3,3};
   int len_Times = sizeof(Times)/sizeof(Times[0]);
+
+  int n_Walks = 100;
 
   int i;
   int j;
   int k;
+  int m;
 
   /*
    * A list of the initial x and z positions of the walkers. 
@@ -41,20 +44,6 @@ int main(int argc, char *argv[]) {
       FacesXZ[i*n_bin_side + j][1] = 1.0/(2.0*n_bin_side) + (i*1.0)/(1.0*n_bin_side);
     }
   }
-
-  /*
-  double CenterFaces[n_bin_side];
-  for (i = 0; i < n_bin_side; i++) {
-    CenterFaces[i] = i*interval + interval/2;
-  }
-
-  int X[faces];
-  int Z[faces];
-  for (i = 0; i < faces; i++) {
-    X[i] = i%n_bin_side;
-    Z[i] = i/n_bin_side;
-  }
-  */
 
   /* 
    * Spawn # of processes
@@ -72,32 +61,21 @@ int main(int argc, char *argv[]) {
    * Error Checking, no of processes needed
    */
   if (Rates[len_Times-1] > 0) {
-    if (n_processes < faces * 2 * TIME * Rates[len_Times-1]) {
+    if (n_processes*n_Walks < TIME*Rates[len_Times-1]) {
       if (process_id == 0) {
-	fprintf(stderr,"Rate > 1: Need at least %d processes for %d iterations, rate %d, and %d faces per side.\n", 
-		faces * 2 * TIME * Rates[len_Times-1],TIME,Rates[len_Times-1],faces);
+	fprintf(stderr, "Rate > 1: Need n_processes * n_Walks to be at least %d\n", TIME*Rates[len_Times-1]);
       }
       exit(EXIT_FAILURE);
     }
   } 
   else if (Rates[len_Times-1] < 0) {
-    if (n_processes < faces * 2 * TIME / abs(Rates[len_Times-1])) {
+    if (n_processes*n_Walks < TIME/abs(Rates[len_Times-1])) {
       if (process_id == 0) {
-	fprintf(stderr,"Rate < 1: Need at least %d processes for %d iterations, rate 1/%d and %d faces per side..\n", 
-		faces * 2 * TIME / abs(Rates[len_Times-1]),TIME,abs(Rates[len_Times-1]),faces);
+	fprintf(stderr, "Rate < 1: Need n_processes * n_Walks to be at least %d\n", TIME/abs(Rates[len_Times-1]));
       }
       exit(EXIT_FAILURE);
     }
   } 
-  else {
-    if (n_processes % (faces * 2) != 0 ) {
-      if (process_id == 0) {
-	fprintf(stderr,"Equil: No. of processes must be divisible by %d.\n", faces * 2);
-      }
-      exit(EXIT_FAILURE);
-    }
-  }
-     
 
   /*
    * Carbon Nanotube Lookup Table and RNG
@@ -112,15 +90,19 @@ int main(int argc, char *argv[]) {
    *
    * Walk is a 2-D array, with TIME rows and DIM cols
    * Each row represents the position in (x,y,z) in a different time
-   */
-  double (*Walk)[DIM] = malloc(sizeof(*Walk) * TIME);
+   */  
+  double (*Walk)[DIM] = malloc(sizeof(*Walk) * TIME * n_Walks * 2 * faces);
   if (Walk) {
-    // process_id/2 is an int
-    // This trick allows us to have a hot and cold walker
-    // injected from opposite sides, i.e. (x,0,z) and (x,1,z).
-    Walk[0][0] = FacesXZ[(process_id/2)%faces][0];
-    Walk[0][1] = process_id % 2;
-    Walk[0][2] = FacesXZ[(process_id/2)%faces][1];
+    for (i = 0; i < n_Walks; i++) {
+      // process_id/2 is an int
+      // This trick allows us to have a hot and cold walker
+      // injected from opposite sides, i.e. (x,0,z) and (x,1,z).
+      for (j = 0; j < faces*2; j++) {
+	Walk[i*TIME*2*faces+j*TIME][0] = FacesXZ[j/2][0];
+	Walk[i*TIME*2*faces+j*TIME][1] = j % 2;
+	Walk[i*TIME*2*faces+j*TIME][2] = FacesXZ[j/2][1];
+      }
+    }
   }
   else {
     if (process_id == 0) {
@@ -129,12 +111,10 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //printf("process %d is at <%g,%g,%g>\n",process_id, Walk[0][0], Walk[0][1], Walk[0][2]);
-
   /*
    * Generate a Random Walk for each process
    */
-  iterate_Random_Walk(Walk, Nanotube_File, rng, TIME, side_length);
+  iterate_Random_Walk(Walk, Nanotube_File, rng, TIME, n_Walks, side_length, faces);
   
   /*
    * Synchronize processes with a barrier
@@ -145,7 +125,11 @@ int main(int argc, char *argv[]) {
    * Gather the Random Walk data from all the processes to find 
    * the walker distribution at different heat flux rates and times
    * 
-   * We give new jobs to some of the spawned processes
+   * We give new jobs to some of the spawned processes.
+   * Specifically, we want to collect the data for len_Times different 
+   * times or rates.
+   * So, we will reassign work to len_Times processes and stop all the 
+   * other processes
    */  
   MPI_Group group_workers;
   MPI_Comm comm_workers;
@@ -159,75 +143,114 @@ int main(int argc, char *argv[]) {
   MPI_Comm_create(MPI_COMM_WORLD, group_workers, &comm_workers);
   
   // Gather from all processes to root, but Broadcast to working processes only
-  double (*AllWalkers)[DIM] = malloc(sizeof(*AllWalkers) * TIME * (n_processes));
-  MPI_Gather(&Walk[0][0], TIME*DIM, MPI_DOUBLE, &AllWalkers[0][0], TIME*DIM,
+  double (*AllWalkers)[DIM] = malloc(sizeof(*AllWalkers) * TIME * n_Walks  * n_processes * 2 * faces);
+  MPI_Gather(&Walk[0][0], TIME*DIM*n_Walks*2*faces, MPI_DOUBLE, &AllWalkers[0][0], TIME*DIM*n_Walks*2*faces,
 	     MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   int *Total_cs = NULL;
   int *Total = NULL;
   int binOfWalker;
-  // jobs for the working processes
-  if (process_id < len_Times) {
-    MPI_Bcast(AllWalkers, TIME*n_processes*DIM, MPI_DOUBLE, 0, comm_workers);  
 
+  // jobs for the working processes
+  if (process_id >= len_Times) {
+    MPI_Finalize();
+  }
+  else {
+    MPI_Bcast(AllWalkers, TIME*n_Walks*n_processes*DIM*2*faces, MPI_DOUBLE, 0, comm_workers);  
+
+    // arrays that contain the walker distribution
     Total_cs = calloc(n_bin_side,sizeof(int));
     Total = calloc(n_bin_side*n_bin_side*n_bin_side, sizeof(int));
 
-    //
-    // Each working process has a different rate and time 
-    // 
-    // Rate exceeds 1 walker per time step
+    /*
+     * Rate exceeds 1 walker per time step
+     * 
+     * Processes each generate n_Walks for each bin on y=0 and y=1, i.e. for 2*faces bins.
+     * So, we want to collect the data from TIME*Rates[process_id] random walk simulations,
+     * meaning, we go determine which bins each of the TIME*Rates[process_id] walkers are 
+     * in. 
+     *
+     * So, we iterate through the processes, then through the n_Walks on the processes, and 
+     * finally through all the bins that walkers are coming from. 
+     *
+     * We have an offset m, which captures the idea that the walkers are injected at a constant
+     * rate into the system. m is incremented for each group of Rates[process_id] random walks
+     * we analyze and has an initial value of 0.
+     */
     if (Rates[process_id] > 0) {
-      for (i = 0, k = 0; i <= Times[process_id]*Rates[process_id]; i++) {
-	for (j = 0; j < 2*faces; j++) {
-	  binOfWalker = calculate_Bin(AllWalkers[i*TIME*2*faces + j*TIME + Times[process_id] - k][0],
-				      AllWalkers[i*TIME*2*faces + j*TIME + Times[process_id] - k][1],
-				      AllWalkers[i*TIME*2*faces + j*TIME + Times[process_id] - k][2],
-				      n_bin_side, side_length);
-	  // update Total at bin accordingly
-	  if (j%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}
-	  if (j%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
-	}
-	if ((i+1)%Rates[process_id] == 0) {
-	  k++;
-	}
-      } 
-    }
-
-    // Rate does not exceed 1 walker per time step
-    else if (Rates[process_id] < 0) {	
-      for (i = 0; i < Times[process_id] / abs(Rates[process_id]); i++) {
-	for (j = 0; i < 2*faces; j++) {	  
-	  binOfWalker = calculate_Bin(AllWalkers[i*TIME*2*faces + j*TIME + 
-						 Times[process_id] + 
-						 i*Rates[process_id]][0],
-				      AllWalkers[i*TIME*2*faces + j*TIME + 
-						 Times[process_id] + 
-						 i*Rates[process_id]][1],
-				      AllWalkers[i*TIME*2*faces + j*TIME + 
-						 Times[process_id] + 
-						 i*Rates[process_id]][2],
-				      n_bin_side, side_length);
-	  // update Total at bin accordingly
-	  if (j%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}	  
-	  if (j%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
+      m = 0;
+      for (i = 0; i < n_processes && i*n_Walks < TIME*Rates[process_id]; i++) {
+	for (j = 0; j < n_Walks && i*n_Walks+j < TIME*Rates[process_id]; j++) {
+	  for (k = 0; k < 2*faces; k++) {
+	    binOfWalker = 
+	      calculate_Bin(AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] - m][0],
+			    AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] - m][1],
+			    AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] - m][2],
+			    n_bin_side, side_length);
+	    // update cross section total
+	    if (k%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}   	
+	    if (k%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
+	  }
+	  if ((j+1)%Rates[process_id]) {m++;}
 	}
       }
     }
-    // Rate is 0, simulate thermal equilibrium
+
+    /* 
+     * Rate does not exceed 1 walker per time step
+     *
+     * Here Rates[process_id] < 0, meaning the rate of injection per bin is 
+     * 1 / |Rates[process_id]|.
+     * 
+     * We iterate through as many random walk simulations similarly as the case
+     * where Rate > 1.
+     */
+    else if (Rates[process_id] < 0) {
+      m = 0;
+      for (i = 0; i < n_processes && i*n_Walks < TIME/abs(Rates[process_id]); i++) {
+	for (j = 0; j < n_Walks && i*n_Walks + j < TIME/abs(Rates[process_id]); j++) {
+	  for (k = 0; k < 2*faces; k++) {
+	    binOfWalker = 
+	      calculate_Bin(AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] + m*Rates[process_id]][0],
+			    AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] + m*Rates[process_id]][1],
+			    AllWalkers[i*n_Walks*2*faces*TIME + j*TIME*2*faces + k*TIME + Times[process_id] + m*Rates[process_id]][2],
+			    n_bin_side, side_length);
+	    // update cross section total
+	    if (k%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}   	
+	    if (k%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
+	  }
+	  m++;
+	}
+      }
+    }
+    
+    /*
+     * Rate is 0, simulate thermal equilibrium
+     *
+     * Here, we are placing n_processes * n_Walks walkers in the center
+     * of each bin on the sides y=0 and y=1. Then, we look at the walker
+     * distribution at Times[process_id].
+     * 
+     */
     else {
       for (i = 0; i < n_processes; i++) {
-	binOfWalker = calculate_Bin(AllWalkers[i*TIME+Times[process_id]][0], 
-				    AllWalkers[i*TIME+Times[process_id]][1],
-				    AllWalkers[i*TIME+Times[process_id]][2],
-				    n_bin_side, side_length);
-	
-	// update Total at bin accordingly
-	if (i%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}   	
-	if (i%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
+	for (j = 0; j < n_Walks; j++) {
+	  for (k = 0; k < 2*faces; k++) {
+	    binOfWalker = 
+	      calculate_Bin(AllWalkers[i*TIME*n_Walks*2*faces + j*TIME*2*faces + k*TIME + Times[process_id]][0], 
+			    AllWalkers[i*TIME*n_Walks*2*faces + j*TIME*2*faces + k*TIME + Times[process_id]][1],
+			    AllWalkers[i*TIME*n_Walks*2*faces + j*TIME*2*faces + k*TIME + Times[process_id]][2],
+			    n_bin_side, side_length);
+	  
+	    // update Total at bin accordingly
+	    if (k%2) {Total[binOfWalker]++;} else {Total[binOfWalker]--;}   	
+	    if (k%2) {Total_cs[binOfWalker/faces]++;} else {Total_cs[binOfWalker/faces]--;}
+	  }
+	}
       }
     }
 
+    // print out cross section totals to a file
     FILE *g;
     char name_g[FILENAME_MAX];
     snprintf(name_g, sizeof(name_g), "run%d_cs.csv", process_id);
@@ -239,13 +262,12 @@ int main(int argc, char *argv[]) {
     }
     fclose(g);
     
-    // print out total to a file
+    // print out the totals of all the bins to a file
     FILE *f;
     char name[FILENAME_MAX];
-    snprintf(name, sizeof(name), "%d.csv", process_id);
+    snprintf(name, sizeof(name), "run%d_bins.csv", process_id);
     f = fopen(name, "w");
 
-    //operations to fill data into file i.txt;
     for (i = 0; i < n_bin_side*n_bin_side*n_bin_side; i++) {
       if (i != n_bin_side*n_bin_side*n_bin_side-1) 
 	fprintf(f, "%d,", Total[i]);

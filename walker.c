@@ -89,16 +89,23 @@ int Random_Walk(double Next[3], double *Current, gsl_rng *rng,
 }
 
 int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng,
-			int TIME, double side_length) {
+			int TIME, int n_Walks, double side_length, int faces) {
 
-  int i;
+  int i, j, k;
   double Next[3];
   
   for (i = 0; i < TIME-1; i++) {
-    Random_Walk(Next, *(Walk+i), rng, Nanotube_File, side_length);
-    Walk[i+1][0]= Next[0];
-    Walk[i+1][1]= Next[1];
-    Walk[i+1][2]= Next[2];
+    for (j = 0; j < n_Walks; j++) {
+      for (k = 0; k < 2*faces; k++) {
+	Random_Walk(Next, *(Walk + i + j*TIME*2*faces + k*TIME), rng, Nanotube_File, side_length);
+	Walk[i + 1 + j*TIME*2*faces + k*TIME][0]= Next[0];
+	Walk[i + 1 + j*TIME*2*faces + k*TIME][1]= Next[1];
+	Walk[i + 1 + j*TIME*2*faces + k*TIME][2]= Next[2];
+
+	//Walk[i+1+j*TIME][1]= Next[1];
+	//Walk[i+1+j*TIME][2]= Next[2];
+      }
+    }
   }
 		 
   return 0;

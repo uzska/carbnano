@@ -55,7 +55,7 @@ int Random_Walk(double Next[3], double *Current, gsl_rng *rng,
 
   double theta;
   double phi;
-  double radius = 1.0/15.0;
+  double radius = 1.0/45.0;
 
   // look at FILE Nanotube_File and act accordingly
   if (0) {

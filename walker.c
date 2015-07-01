@@ -50,14 +50,14 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
  * old position Current and the location of the nanotubes
  */
 int Random_Walk(double Next[3], double *Current, gsl_rng *rng, 
-		FILE *Nanotube_File, double side_length) {
+		FILE *f, double side_length) {
 
 
   double theta;
   double phi;
-  double radius = 1.0/45.0;
+  double radius = 1.0/70.0;
 
-  // look at FILE Nanotube_File and act accordingly
+  // look at nanotube arrays and act accordingly
   if (0) {
   }
   // random walk, no restraints on it's new position

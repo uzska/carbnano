@@ -14,7 +14,7 @@ int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng,
  * vector of one random walk
  */
 int Random_Walk(double Next[3], double *Current, gsl_rng *rng, 
-		FILE *Nanotube_File, double side_length);
+		FILE *f, double side_length);
 
 /*
  * Returns a value for phi, which depends on the Current y-value,

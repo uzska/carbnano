@@ -89,21 +89,53 @@ int Random_Walk(double Next[3], double *Current, gsl_rng *rng,
 }
 
 int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng,
-			int TIME, int n_Walks, double side_length, int faces) {
+			int TIME, int Times, int Rates, int id, int n_Walks, double side_length, int faces) {
 
   int i, j, k;
   double Next[3];
-  
-  for (i = 0; i < TIME-1; i++) {
-    for (j = 0; j < n_Walks; j++) {
-      for (k = 0; k < 2*faces; k++) {
-	Random_Walk(Next, *(Walk + i + j*TIME*2*faces + k*TIME), rng, Nanotube_File, side_length);
-	Walk[i + 1 + j*TIME*2*faces + k*TIME][0]= Next[0];
-	Walk[i + 1 + j*TIME*2*faces + k*TIME][1]= Next[1];
-	Walk[i + 1 + j*TIME*2*faces + k*TIME][2]= Next[2];
+  if (Rates = 0) {
+    for (i = 0; i < TIME-1; i++) {
+      for (j = 0; j < n_Walks; j++) {
+	for (k = 0; k < 2*faces; k++) {
+	  Random_Walk(Next, *(Walk + i + j*TIME*2*faces + k*TIME), rng, Nanotube_File, side_length);
+	  Walk[i + 1 + j*TIME*2*faces + k*TIME][0]= Next[0];
+	  Walk[i + 1 + j*TIME*2*faces + k*TIME][1]= Next[1];
+	  Walk[i + 1 + j*TIME*2*faces + k*TIME][2]= Next[2];
+	  
+	  //Walk[i+1+j*TIME][1]= Next[1];
+	  //Walk[i+1+j*TIME][2]= Next[2];
+	}
+      }
+    }
+  }
+  else if (Rates > 0) {
+    for (i = 0; i < n_Walks; i++) {
+      for (j = 0; j < 2*faces; j++) {
+	for (k = 0; k < Times - id*n_Walks/Rates - i/Rates - 1; k++) {
 
-	//Walk[i+1+j*TIME][1]= Next[1];
-	//Walk[i+1+j*TIME][2]= Next[2];
+	  int x = Times - id*n_Walks*Rates - i/Rates;
+	  Random_Walk(Next, *(Walk + k + j*(Times - id*n_Walks/Rates - i/Rates) + 
+			      i*2*faces*(Times - id*n_Walks/Rates - i/Rates)), 
+		      rng, Nanotube_File, side_length);
+
+	  Walk[1 + k + j*x + i*2*faces*x][0] = Next[0];
+	  Walk[1 + k + j*x + i*2*faces*x][1] = Next[1];
+	  Walk[1 + k + j*x + i*2*faces*x][2] = Next[2];
+	}
+      }
+    }
+  }
+  else {
+    for (i = 0; i < n_Walks; i++) {
+      for (j = 0; j < 2*faces; j++) {
+	for (k = 0; k < Times + id*n_Walks*Rates + i*Rates - 1; k++) {
+	  int x = Times + id*n_Walks*Rates + i*Rates;
+	  Random_Walk(Next, *(Walk + k + j*x + i*2*faces*x), rng, Nanotube_File, side_length);
+	  
+	  Walk[1 + k + j*x + i*2*faces*x][0] = Next[0];
+	  Walk[1 + k + j*x + i*2*faces*x][1] = Next[1];
+	  Walk[1 + k + j*x + i*2*faces*x][2] = Next[2];
+	}
       }
     }
   }

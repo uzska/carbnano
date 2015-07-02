@@ -71,22 +71,20 @@ int main(int argc, char *argv[]) {
   
   if (Rates[len_Times-1] > 0) {
     if (n_processes*n_Walks*iterations < TIME*Rates[len_Times-1]) {
-    //if (process_id == 0) {
-	fprintf(stderr, "Rate > 1: Need n_processes * n_Walks * iterations to be at least %d\n", TIME*Rates[len_Times-1]);
-      //}
+      fprintf(stderr, "Rate > 1: Need n_processes * n_Walks * iterations to be at least %d\n", TIME*Rates[len_Times-1]);
       exit(EXIT_FAILURE);
     }
   } 
   else if (Rates[len_Times-1] < 0) {
     if (n_processes*n_Walks*iterations < TIME/abs(Rates[len_Times-1])) {
-    //if (process_id == 0) {
-	fprintf(stderr, "Rate < 1: Need n_processes * n_Walks * iterations to be at least %d\n", TIME/abs(Rates[len_Times-1]));
-      //}
+      fprintf(stderr, "Rate < 1: Need n_processes * n_Walks * iterations to be at least %d\n", TIME/abs(Rates[len_Times-1]));
       exit(EXIT_FAILURE);
     }
   }
 
-  // Final Total array 
+  /*
+   * Final Total array 
+   */
   if (process_id == 0) {
     FinalTotal_cs = malloc(sizeof(*FinalTotal_cs) * n_bin_side);
   }
@@ -97,9 +95,10 @@ int main(int argc, char *argv[]) {
   FILE *Nanotube_File = NULL;
 
   //char *Nanotubes = malloc(sizeof(int) * fineness * fineness * fineness * n_bins_side * n_bins_side * n_bins_side);
-  int n_tubes;
-  double i_Nanotubes[n_tubes][n_tubes][n_tubes];  
-  double f_Nanotubes[n_tubes][n_tubes][n_tubes];
+  //int n_tubes;
+  //double i_Nanotubes[n_tubes][n_tubes][n_tubes];  
+  //double f_Nanotubes[n_tubes][n_tubes][n_tubes];
+  //char *Nanotubes = malloc(sizeof(char) * (n_bin_side*fineness) * (n_bin_side*fineness) * (n_bin_side*fineness));
 
   /*
    * RNG
@@ -120,16 +119,59 @@ int main(int argc, char *argv[]) {
      * Walk is a 2-D array, with TIME rows and DIM cols
      * Each row represents the position in (x,y,z) in a different time
      */  
-    double (*Walk)[DIM] = malloc(sizeof(*Walk) * TIME * n_Walks * 2 * faces);
-    if (Walk) {
+
+
+    // allocate memory
+    double (*Walk)[DIM];
+    if (Rates[len_Times-1] > 0) {
+      int s = 0;
       for (i = 0; i < n_Walks; i++) {
-	// process_id/2 is an int
-	// This trick allows us to have a hot and cold walker
-	// injected from opposite sides, i.e. (x,0,z) and (x,1,z).
-	for (j = 0; j < faces*2; j++) {
-	  Walk[i*TIME*2*faces+j*TIME][0] = FacesXZ[j/2][0];
-	  Walk[i*TIME*2*faces+j*TIME][1] = j % 2;
-	  Walk[i*TIME*2*faces+j*TIME][2] = FacesXZ[j/2][1];
+	s = s + (Times[len_Times-1] - process_id*n_Walks/Rates[len_Times-1] - i/Rates[len_Times-1]) * 2 * faces;
+      }
+      Walk = malloc(sizeof(*Walk) * s);
+    }
+    else if (Rates[len_Times-1] < 0) {
+      int s = 0;
+      for (i = 0; i < n_Walks; i++) {
+	s = s + (Times[len_Times-1] + process_id*n_Walks*Rates[len_Times-1] + i*Rates[len_Times-1]) * 2 * faces;
+      }
+      Walk = malloc(sizeof(*Walk) * s);
+    }
+    else {
+      int s = TIME * n_Walks * 2 * faces;
+      Walk = malloc(sizeof(*Walk) * s);
+    }
+
+    // initialize the starting walkers
+    if (Walk) {
+      int s = 0;
+      if (Rates[len_Times-1] > 0) {
+	  for (i = 0; i < n_Walks; i++) {
+	    for (j = 0; j < faces*2; j++) {	      
+	      Walk[s][0] = FacesXZ[j/2][0];
+	      Walk[s][1] = j%2;
+	      Walk[s][2] = FacesXZ[j/2][1];
+	      s += Times[len_Times-1] - process_id*n_Walks/Rates[len_Times-1] - i/Rates[len_Times-1];
+	    }
+	  }
+      }
+      else if (Rates[len_Times-1] < 0) {
+	for (i = 0; i < n_Walks; i++) {
+	  for (j = 0; j < faces*2; j++) {
+	    Walk[s][0] = FacesXZ[j/2][0];
+	    Walk[s][1] = j%2;
+	    Walk[s][2] = FacesXZ[j/2][1];
+	    s += Times[len_Times-1] + process_id*n_Walks*Rates[len_Times-1] + i*Rates[len_Times-1];
+	  }
+	}
+      }
+      else {
+	for (i = 0; i < n_Walks; i++) {
+	  for (j = 0; j < faces*2; j++) {
+	    Walk[i*TIME*2*faces+j*TIME][0] = FacesXZ[j/2][0];
+	    Walk[i*TIME*2*faces+j*TIME][0] = j%2;
+	    Walk[i*TIME*2*faces+j*TIME][2] = FacesXZ[j/2][1];
+	  }
 	}
       }
     }
@@ -143,13 +185,16 @@ int main(int argc, char *argv[]) {
     /*
      * Generate a Random Walk for each process
      */
-    iterate_Random_Walk(Walk, NULL, rng, TIME, n_Walks, side_length, faces);
+    //iterate_Random_Walk(Walk, NULL, rng, TIME, n_Walks, side_length, faces);
+    //iterate_Random_Walk(Walk, NULL, rng, TIME, Times[len_Times-1], Rates[len_Times-1], process_id, n_Walks, side_length, faces);
     
     /*
      * Synchronize processes with a barrier
      */
     MPI_Barrier(MPI_COMM_WORLD);  
     
+    /*
+
     int binOfWalker;
     int (*SubTotal_cs)[len_Times] = calloc(n_bin_side,sizeof(*SubTotal_cs));
     //int (*SubTotal)[len_Times] = calloc(n_bin_side*n_bin_side*n_bin_side,sizeof(*SubTotal));
@@ -224,6 +269,10 @@ int main(int argc, char *argv[]) {
     //free(SubTotal);
     free(SubTotal_cs);
     free(Total_cs);
+    
+    //barrier
+
+
   } // end for
   
   if (process_id == 0) {
@@ -240,11 +289,14 @@ int main(int argc, char *argv[]) {
       }
       fclose(g);
     }
+    */
   }
 
   // free memory
-  free(FinalTotal_cs);
+  //free(FinalTotal_cs);
   
+
+
   MPI_Finalize();
   return 0;
 }

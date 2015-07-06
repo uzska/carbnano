@@ -48,18 +48,18 @@ int main(int argc, char *argv[]) {
    * World Variables
    */
   double side_length = 1;
-  int n_bin_side = 10; //per side 
+  int n_bin_side = 200; //per side 
   int faces = n_bin_side*n_bin_side;
   int DIM = 3;
   
   double interval = side_length / ((double)n_bin_side);
   int fineness = 5; //the much finer the nanotube grid is than the temp bins
 
-  int Times[] = {0,1,2,3}; 
-  int Rate = 0;
+  int Times[] = {200,400,600,800,1000,1200,1400,1600,1800,2000};
+  int Rate = 4;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 3; // number of different walks each process simulates
+  int walks = 500; // number of different walks each process simulates
   
   int i,j,k,p,s;
   
@@ -118,13 +118,34 @@ int main(int argc, char *argv[]) {
   /*
    * Carbon Nanotube Lookup Table
    */
-  FILE *Nanotube_File = NULL;
+  char *Nanotubes = calloc(fineness * fineness * fineness * n_bin_side * n_bin_side * n_bin_side,
+			   sizeof(char));
+  int n_tubes;
+  double i_Nanotubes[n_tubes][DIM];
+  double f_Nanotubes[n_tubes][DIM];
 
-  //char *Nanotubes = malloc(sizeof(int) * fineness * fineness * fineness * n_bins_side * n_bins_side * n_bins_side);
-  //int n_tubes;
-  //double i_Nanotubes[n_tubes][n_tubes][n_tubes];  
-  //double f_Nanotubes[n_tubes][n_tubes][n_tubes];
-  //char *Nanotubes = malloc(sizeof(char) * (n_bin_side*fineness) * (n_bin_side*fineness) * (n_bin_side*fineness));
+
+  for (i = 0; i < n_tubes; i++) {
+    double x = i_Nanotubes[i][0];    
+    double y = i_Nanotubes[i][1];    
+    double z = i_Nanotubes[i][2];    
+
+    double dx = f_Nanotubes[i][0] - i_Nanotubes[i][0];
+    double dy = f_Nanotubes[i][1] - i_Nanotubes[i][1];
+    double dz = f_Nanotubes[i][2] - i_Nanotubes[i][2];
+    
+    double norm = sqrt(dx*dx + dy*dy + dz*dz);
+    
+    for (j = 0; j <= norm; j++) {
+      int b = calculate_Bin(x,y,z,n_bin_side*fineness,1.0);
+      Nanotubes[b] = 'x';
+
+      x += dx/norm;
+      y += dy/norm;
+      z += dz/norm;
+    }
+  }
+
 
   /*
    * RNG
@@ -168,7 +189,7 @@ int main(int argc, char *argv[]) {
     for (m = 0; m < len_Times && T >= 0; m++) {
       for (j = 0; j < 2*faces && T >= 0; j++) {
 	for (k = 0; k < T; k++) {
-	  Random_Walk(*(Walk+j),rng,NULL,side_length);
+	  Random_Walk(*(Walk+j),rng,Nanotubes,side_length,n_bin_side,fineness);
 	}	
 	bin = calculate_Bin(Walk[j][0], Walk[j][1], Walk[j][2], n_bin_side, side_length);
 	if (j%2==0) {SubTotal_cs[bin/faces][m]++;} else {SubTotal_cs[bin/faces][m]--;} 
@@ -196,7 +217,7 @@ int main(int argc, char *argv[]) {
     for (k = 0; k < len_Times; k++) {
       FILE *g;                                                                                                      
       char name_g[FILENAME_MAX];
-      snprintf(name_g, sizeof(name_g), "output/Totalcs_%d.csv",k);
+      snprintf(name_g, sizeof(name_g), "output3/Totalcs_%d.csv",k);
       g = fopen(name_g,"w");
       
       for (i = 0; i < n_bin_side; i++) {

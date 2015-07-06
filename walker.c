@@ -49,27 +49,51 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
  * old position Current and the location of the nanotubes
  */
 int Random_Walk(double *Current, gsl_rng *rng, 
-		FILE *f, double side_length) {
+		char *N, double side_length, int bins, int fineness) {
 
 
   double theta;
   double phi;
-  double radius = 1.0/9.0;
+  double radius = 1.0/199.0;
+  double nanoBarrier = 0.5;
 
-  // look at nanotube arrays and act accordingly
+  // TODO: somehow have to know what nanotube we are in
+
+  // if in nanotube
   if (0) {
-  }
-  // random walk, no restraints on it's new position
-  else {
-    theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI;
-    phi = get_phi(Current[1], rng, radius, side_length);
+    // either redistribute and return or get new position
+    double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
+    if (prob > nanoBarrier) {
+      
+      return 1;
+    }
   }
 
+
+  // calculate angles  
+  theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI;
+  phi = get_phi(Current[1], rng, radius, side_length);
+  
+  // potential new positions
+  double x = radius*sin(theta)*cos(phi) + Current[0];
+  double y = radius*sin(theta)*sin(phi) + Current[1];
+  double z = radius*cos(theta) + Current[2];
+  
+  if (N[calculate_Bin(x,y,z,fineness*bins,side_length)] == 'x') {
+    // probability that walker goes in nanotube
+    double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
+    // exits and walker does not get new position if 
+    // probability is lacking
+    if (prob < nanoBarrier) {
+      return 1;
+    }
+  }
+  
   // update x, y, z
   Current[0] = radius*sin(theta)*cos(phi) + Current[0];
   Current[1] = radius*sin(theta)*sin(phi) + Current[1];
   Current[2] = radius*cos(theta) + Current[2];
-
+  
   // periodic boundary conditions
   if (Current[0] > side_length) {
     Current[0] -= side_length;
@@ -84,7 +108,7 @@ int Random_Walk(double *Current, gsl_rng *rng,
     Current[2] += side_length;
   }
 
-  return 0;
+  return 0;  
 }
 
 /*

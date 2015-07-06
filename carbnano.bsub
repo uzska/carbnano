@@ -132,8 +132,8 @@
 # NOTE: You are encouraged to change these to numbers that are
 # appropriate for you.
 #
-#BSUB -n 15
-#BSUB -R "span[ptile=15]"
+#BSUB -n 16
+#BSUB -R "span[ptile=16]"
 #
 # STDOUT is the output that normally would go to the terminal screen.
 # STDERR is like STDOUT, except that it contains error messages instead
@@ -151,15 +151,15 @@
 # * CHANGE directory_to_run_in to the directory you want to run in;
 # * CHANGE jobname to your preferred name for this batch job.
 #
-#BSUB -o /home/joe/reu/carbnana/free_%J_stdout.txt
-#BSUB -e /home/joe/reu/carbnano/free_%J_stderr.txt
+#BSUB -o /home/joe/reu/carbnano/output/free_%J_stdout.txt
+#BSUB -e /home/joe/reu/carbnano/output/free_%J_stderr.txt
 #
 # The BSUB directive below says to run for up to 12 hours (and zero
 # minutes) of "wall clock" time (time experienced in real life).
 # Currently, the maximum allowable wall clock time per batch job is
 # 48:00 hours.
 #
-#BSUB -W 0:30
+#BSUB -W 12:00
 #
 # The BSUB directive below says the name of the batch job, as it
 # will appear in the batch queue when you do a bjobs command.

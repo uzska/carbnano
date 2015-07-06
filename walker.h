@@ -14,7 +14,7 @@
  * vector of one random walk
  */
 int Random_Walk(double *Current, gsl_rng *rng, 
-		FILE *f, double side_length);
+		char *N, double side_length,int bins, int fineness);
 
 /*
  * Returns a value for phi, which depends on the Current y-value,

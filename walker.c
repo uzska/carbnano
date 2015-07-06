@@ -2,7 +2,6 @@
  * walker.c
  */
 #include <gsl_rng.h>
-#include <gsl_matrix.h>
 #include <math.h>
 
 /*
@@ -49,13 +48,13 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
  * Next is the new position of the walker, given it's 
  * old position Current and the location of the nanotubes
  */
-int Random_Walk(double Next[3], double *Current, gsl_rng *rng, 
+int Random_Walk(double *Current, gsl_rng *rng, 
 		FILE *f, double side_length) {
 
 
   double theta;
   double phi;
-  double radius = 1.0/10.0;
+  double radius = 1.0/9.0;
 
   // look at nanotube arrays and act accordingly
   if (0) {
@@ -67,27 +66,28 @@ int Random_Walk(double Next[3], double *Current, gsl_rng *rng,
   }
 
   // update x, y, z
-  Next[0] = radius*sin(theta)*cos(phi) + Current[0];
-  Next[1] = radius*sin(theta)*sin(phi) + Current[1];
-  Next[2] = radius*cos(theta) + Current[2];
+  Current[0] = radius*sin(theta)*cos(phi) + Current[0];
+  Current[1] = radius*sin(theta)*sin(phi) + Current[1];
+  Current[2] = radius*cos(theta) + Current[2];
 
   // periodic boundary conditions
-  if (Next[0] > side_length) {
-    Next[0] -= side_length;
+  if (Current[0] > side_length) {
+    Current[0] -= side_length;
   }
-  if (Next[2] > side_length) {
-    Next[2] -= side_length;
+  if (Current[2] > side_length) {
+    Current[2] -= side_length;
   }
-  if (Next[0] < 0) {
-    Next[0] += side_length;
+  if (Current[0] < 0) {
+    Current[0] += side_length;
   }
-  if (Next[2] < 0) {
-    Next[2] += side_length;
+  if (Current[2] < 0) {
+    Current[2] += side_length;
   }
 
   return 0;
 }
 
+/*
 int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng, int iteration, int n_proc,
 			int Times, int Rates, int id, int walks, double side_length, int faces) {
 
@@ -135,4 +135,4 @@ int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng, in
 
   return 0;
 }
-
+*/

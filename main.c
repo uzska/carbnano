@@ -137,19 +137,26 @@ int main(int argc, char *argv[]) {
   double (*Walk)[DIM] = malloc(sizeof(*Walk) * 2 * faces);
   if (Walk) {
     initWalkArray(Walk,FacesXZ,faces);
-    /*
-    for (i = 0; i < 2*faces; i++) {
-      Walk[i][0] = FacesXZ[i/2][0];
-      Walk[i][1] = i%2;
-      Walk[i][2] = FacesXZ[i/2][1];
-    }
-    */
   }
   else {
     fprintf(stderr,"Process %d: Walk array could not be allocated\n", process_id);
     exit(EXIT_FAILURE);
   }
   
+  /*
+   * Random Walk and walker data collection
+   *
+   * Each process can generate up to "walks" random walkers. 
+   * To determine if a walker needs to be generated, we calculate T,
+   * which is how long the walker has alive for, given that we want
+   * to measure the system at Times[0], Times[1], ... Times[len_Times-1].
+   *
+   * If T is nonnegative, we do record the walker's position after T 
+   * random walks.
+   *
+   * We then record the walker's position at the next Time, which means
+   * we have to do Times[m+1]-Times[m] more random walks.
+   */
   int bin;
   int (*SubTotal_cs)[len_Times] = calloc(n_bin_side,sizeof(*SubTotal_cs));
 
@@ -157,7 +164,7 @@ int main(int argc, char *argv[]) {
     if (i) {initWalkArray(Walk, FacesXZ, faces);}
 
     int T = initTime(Times[0],Rate,process_id,walks,i);
-    //if (T > 0) {
+
     for (m = 0; m < len_Times && T >= 0; m++) {
       for (j = 0; j < 2*faces && T >= 0; j++) {
 	for (k = 0; k < T; k++) {
@@ -168,7 +175,7 @@ int main(int argc, char *argv[]) {
       }
       if (m!=len_Times-1) {T = Times[m+1] - Times[m];}
     }
-  //else {break;}
+
   }
 
   /*

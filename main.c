@@ -7,6 +7,18 @@
 #include "nanotube.h"
 #include "walker.h"
 
+/*
+ * Returns the max of three numbers
+ */
+int getMax(int x, int y, int z) {
+  if (x >= y && x >= z) {return x;}
+  else if (y >= x && y >= z) {return y;}
+  else {return z;}
+}
+
+/*
+ * Starting positions of the walkers.
+ */
 int initWalkArray(double (*W)[3], double F[][2], int faces) {
   int i;
   for (i = 0; i < 2*faces; i++) {
@@ -17,6 +29,10 @@ int initWalkArray(double (*W)[3], double F[][2], int faces) {
   return 0;
 }
 
+/*
+ * Offset algorithm to determine how many time steps of the walker's 
+ * position should be calculated
+ */
 int initTime(int Time, int Rate, int id, int walks, int currentWalk) {
   if (Rate > 0) {
     return (Time - id*walks/Rate - currentWalk/Rate);
@@ -42,25 +58,28 @@ int updateTime(int Time, int Rate, int ith_walk) {
   }
 }
 
+/* 
+ *  Main Loop 
+ */
 int main(int argc, char *argv[]) {
 
-  /*
-   * World Variables
-   */
+  /* World Variables */
   double side_length = 1;
-  int n_bin_side = 200; //per side 
+  int n_bin_side = 10; //per side 
   int faces = n_bin_side*n_bin_side;
   int DIM = 3;
   
   double interval = side_length / ((double)n_bin_side);
-  int fineness = 5; //the much finer the nanotube grid is than the temp bins
+  int fineness = 3; //the much finer the nanotube grid is than the temp bins
 
-  int Times[] = {200,400,600,800,1000,1200,1400,1600,1800,2000};
-  int Rate = 4;
+  /* Times, Rate, and walks  */
+  int Times[] = {20,40};
+  int Rate = 1;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 500; // number of different walks each process simulates
+  int walks = 20; // number of different walks each process simulates
   
+  /* iterator variables  */
   int i,j,k,p,s;
   
   int m;
@@ -78,9 +97,7 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  /* 
-   * Spawn # of processes
-   */
+  /* Spawn # of processes */
   int process_id;
   int n_processes;
   
@@ -89,9 +106,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD,&process_id);
 
 
-  /*
-   * Error Checking, no of processes needed
-   */
+  /* Error Checking, no of processes needed */
   if (Rate > 0) {
     if (n_processes*walks < Times[len_Times-1]*Rate) {
       fprintf(stderr, "Rate > 1: Need n_processes * walks to be >= %d\n", 
@@ -107,45 +122,52 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /*
-   * Total array 
-   */
+  /* Total array */
   int (*Total_cs)[len_Times] = NULL;
   if (process_id == 0) {
     Total_cs = malloc(sizeof(*Total_cs) * n_bin_side);
   }
   
-  /*
-   * Carbon Nanotube Lookup Table
-   */
-  char *Nanotubes = calloc(fineness * fineness * fineness * n_bin_side * n_bin_side * n_bin_side,
-			   sizeof(char));
-  int n_tubes;
+  /* Carbon Nanotube Lookup Table */
+  int *Nanotubes = calloc(fineness * fineness * 
+			  fineness * n_bin_side * 
+			  n_bin_side * n_bin_side,
+			   sizeof(int));
+  int n_tubes = 1;
   double i_Nanotubes[n_tubes][DIM];
   double f_Nanotubes[n_tubes][DIM];
 
+  i_Nanotubes[0][0] = 0;
+  i_Nanotubes[0][1] = 0;
+  i_Nanotubes[0][2] = 0;
+
+  f_Nanotubes[0][0] = 0;
+  f_Nanotubes[0][0] = 1;
+  f_Nanotubes[0][0] = 1;
 
   for (i = 0; i < n_tubes; i++) {
-    double x = i_Nanotubes[i][0];    
-    double y = i_Nanotubes[i][1];    
-    double z = i_Nanotubes[i][2];    
+    // determine the x,y, and z bin numbers
+    int x = i_Nanotubes[i][0] * n_bin_side * fineness / side_length;
+    int y = i_Nanotubes[i][1] * n_bin_side * fineness / side_length;
+    int z = i_Nanotubes[i][2] * n_bin_side * fineness / side_length;
 
-    double dx = f_Nanotubes[i][0] - i_Nanotubes[i][0];
-    double dy = f_Nanotubes[i][1] - i_Nanotubes[i][1];
-    double dz = f_Nanotubes[i][2] - i_Nanotubes[i][2];
-    
-    double norm = sqrt(dx*dx + dy*dy + dz*dz);
-    
-    for (j = 0; j <= norm; j++) {
-      int b = calculate_Bin(x,y,z,n_bin_side*fineness,1.0);
-      Nanotubes[b] = 'x';
+    int xx = f_Nanotubes[i][0] * n_bin_side * fineness / side_length;
+    int yy = f_Nanotubes[i][1] * n_bin_side * fineness / side_length;
+    int zz = f_Nanotubes[i][2] * n_bin_side * fineness / side_length;
+        
+    int max = getMax(xx-x,yy-y,zz-z);
 
-      x += dx/norm;
-      y += dy/norm;
-      z += dz/norm;
+    double dx = (xx - x)/max;
+    double dy = (yy - y)/max;
+    double dz = (zz - z)/max;
+
+    // fill in bins between initial and final bins
+    while (x <= f_Nanotubes[i][0]) {
+      int b = x + y*(n_bin_side*fineness)*(n_bin_side*fineness) + z*(n_bin_side);
+      Nanotubes[b] = i+1;
+      x += dx; y += dy; z += dz;
     }
   }
-
 
   /*
    * RNG
@@ -189,10 +211,14 @@ int main(int argc, char *argv[]) {
     for (m = 0; m < len_Times && T >= 0; m++) {
       for (j = 0; j < 2*faces && T >= 0; j++) {
 	for (k = 0; k < T; k++) {
-	  Random_Walk(*(Walk+j),rng,Nanotubes,side_length,n_bin_side,fineness);
+	  Random_Walk(*(Walk+j),rng,i_Nanotubes,f_Nanotubes,
+		      Nanotubes,side_length,n_bin_side,fineness);
 	}	
-	bin = calculate_Bin(Walk[j][0], Walk[j][1], Walk[j][2], n_bin_side, side_length);
-	if (j%2==0) {SubTotal_cs[bin/faces][m]++;} else {SubTotal_cs[bin/faces][m]--;} 
+	bin = calculate_Bin(Walk[j][0], Walk[j][1], Walk[j][2], 
+			    n_bin_side, side_length);
+
+	if (j%2==0) {SubTotal_cs[bin/faces][m]++;} 
+	else {SubTotal_cs[bin/faces][m]--;}
       }
       if (m!=len_Times-1) {T = Times[m+1] - Times[m];}
     }
@@ -217,7 +243,7 @@ int main(int argc, char *argv[]) {
     for (k = 0; k < len_Times; k++) {
       FILE *g;                                                                                                      
       char name_g[FILENAME_MAX];
-      snprintf(name_g, sizeof(name_g), "output3/Totalcs_%d.csv",k);
+      snprintf(name_g, sizeof(name_g), "output/Totalcs_%d.csv",k);
       g = fopen(name_g,"w");
       
       for (i = 0; i < n_bin_side; i++) {

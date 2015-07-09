@@ -13,8 +13,8 @@
  * Helper function for iterateRandomWalk. Returns the position
  * vector of one random walk
  */
-int Random_Walk(double *Current, gsl_rng *rng, 
-		char *N, double side_length,int bins, int fineness);
+int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3], double f_N[][3],
+		int *N, double side_length,int bins, int fineness);
 
 /*
  * Returns a value for phi, which depends on the Current y-value,

@@ -10,7 +10,7 @@
 /*
  * Least Squares Method to Calculate Slope
  */
-double computeSlope(int *T, int bins) {
+int computeSlope(int *T, int bins, double *slope, double *y_int) {
   int i;
   double X_avg = 0;
   double Y_avg = 0;
@@ -22,14 +22,16 @@ double computeSlope(int *T, int bins) {
   X_avg /= (1.0*bins);
   Y_avg /= (1.0*bins);
 
-  double slope = 0;
   double denom = 0;
   for (i = 0; i < bins; i++) {
-    slope += (i-X_avg) * (T[i] - Y_avg);
+    *slope += (i-X_avg) * (T[i] - Y_avg);
     denom += (i-X_avg) * (i-X_avg);
   }
 
-  return (slope/denom);
+  *slope /= denom;
+  *y_int = Y_avg - (*slope)*X_avg;
+  
+  return 0;
 }
 
 
@@ -270,7 +272,8 @@ int main(int argc, char *argv[]) {
 
 
       // slope, thermal conductivities
-      double slope = computeSlope(&Total_cs[i][0], n_bin_side);
+      double slope = 0; double y_int;
+      computeSlope(&Total_cs[i][0], n_bin_side, &slope, &y_int);
       double flux; 
       if (Rate > 0) {
 	flux = Rate*faces;
@@ -283,7 +286,7 @@ int main(int argc, char *argv[]) {
       }
       
       double conduct = -1.0*flux / slope;
-      fprintf(f,"slope: %g conductivity: %g\n",slope,conduct);
+      fprintf(f,"slope: %g y-int: %g conductivity: %g\n ",slope,y_int,conduct);
     }
     fclose(f);
 

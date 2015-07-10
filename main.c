@@ -8,6 +8,32 @@
 #include "walker.h"
 
 /*
+ * Least Squares Method to Calculate Slope
+ */
+double computeSlope(int *T, int bins) {
+  int i;
+  double X_avg = 0;
+  double Y_avg = 0;
+  for (i = 0; i < bins; i++) {
+    X_avg += i; 
+    Y_avg += T[i];
+  }
+
+  X_avg /= (1.0*bins);
+  Y_avg /= (1.0*bins);
+
+  double slope = 0;
+  double denom = 0;
+  for (i = 0; i < bins; i++) {
+    slope += (i-X_avg) * (T[i] - Y_avg);
+    denom += (i-X_avg) * (i-X_avg);
+  }
+
+  return (slope/denom);
+}
+
+
+/*
  * Returns the max of three numbers
  */
 int getMax(int x, int y, int z) {
@@ -39,19 +65,6 @@ int initTime(int Time, int Rate, int id, int walks, int currentWalk) {
   }
   else if (Rate < 0) {
     return (Time + id*walks*Rate + currentWalk*Rate);
-  }
-  else {
-    return Time;
-  }
-}
-
-int updateTime(int Time, int Rate, int ith_walk) {
-  if (Rate > 0) {
-    if (ith_walk % Rate == 0) {return (Time - 1);}
-    else {return Time;}
-  }
-  else if (Rate < 0) {
-    return (Time + Rate);
   }
   else {
     return Time;
@@ -144,7 +157,8 @@ int main(int argc, char *argv[]) {
   f_Nanotubes[0][0] = 0;
   f_Nanotubes[0][0] = 1;
   f_Nanotubes[0][0] = 1;
-
+  
+  /* fill in bins between initial and final bins */
   for (i = 0; i < n_tubes; i++) {
     // determine the x,y, and z bin numbers
     int x = i_Nanotubes[i][0] * n_bin_side * fineness / side_length;
@@ -161,7 +175,6 @@ int main(int argc, char *argv[]) {
     double dy = (yy - y)/max;
     double dz = (zz - z)/max;
 
-    // fill in bins between initial and final bins
     while (x <= f_Nanotubes[i][0]) {
       int b = x + y*(n_bin_side*fineness)*(n_bin_side*fineness) + z*(n_bin_side);
       Nanotubes[b] = i+1;
@@ -169,14 +182,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /*
-   * RNG
-   */
+  /* RNG */
   const gsl_rng_type *T = gsl_rng_taus;
   gsl_rng *rng = gsl_rng_alloc(T);
   gsl_rng_set(rng, time(NULL)+process_id);
 
-  
+  /* Random Walk, holds only the current position  */  
   double (*Walk)[DIM] = malloc(sizeof(*Walk) * 2 * faces);
   if (Walk) {
     initWalkArray(Walk,FacesXZ,faces);
@@ -204,11 +215,14 @@ int main(int argc, char *argv[]) {
   int (*SubTotal_cs)[len_Times] = calloc(n_bin_side,sizeof(*SubTotal_cs));
 
   for (i = 0; i < walks; i++) {
+    // reinitialize Walk array every random walk that we perform
     if (i) {initWalkArray(Walk, FacesXZ, faces);}
-
+    // How long we need to run the simulation for
     int T = initTime(Times[0],Rate,process_id,walks,i);
 
+    // go through each time in the Time array
     for (m = 0; m < len_Times && T >= 0; m++) {
+      // random walk for each walker generated on the 2*n_bin_side^2 bins
       for (j = 0; j < 2*faces && T >= 0; j++) {
 	for (k = 0; k < T; k++) {
 	  Random_Walk(*(Walk+j),rng,i_Nanotubes,f_Nanotubes,
@@ -220,14 +234,13 @@ int main(int argc, char *argv[]) {
 	if (j%2==0) {SubTotal_cs[bin/faces][m]++;} 
 	else {SubTotal_cs[bin/faces][m]--;}
       }
+      // get new T to determine how much longer we need to run the 
+      // simulation until we record the position
       if (m!=len_Times-1) {T = Times[m+1] - Times[m];}
     }
-
   }
 
-  /*
-   * Synchronize processes with a barrier
-   */
+  /* Synchronize processes with a barrier */
   MPI_Barrier(MPI_COMM_WORLD);  
 
   // free memory
@@ -237,9 +250,12 @@ int main(int argc, char *argv[]) {
     
   // free memory
   free(SubTotal_cs);
-  
+
+  /* print out cross section totals, slopes, and thermal conductivities */
   if (process_id == 0) {
-    // print out cross section totals to a file
+    FILE *f;
+    f = fopen("results.txt","w");
+
     for (k = 0; k < len_Times; k++) {
       FILE *g;                                                                                                      
       char name_g[FILENAME_MAX];
@@ -251,7 +267,26 @@ int main(int argc, char *argv[]) {
 	else {fprintf(g,"%d",Total_cs[i][k]);}
       }
       fclose(g);
+
+
+      // slope, thermal conductivities
+      double slope = computeSlope(&Total_cs[i][0], n_bin_side);
+      double flux; 
+      if (Rate > 0) {
+	flux = Rate*faces;
+      }
+      else if (Rate < 0) {
+	flux = faces/abs(Rate);
+      }
+      else {
+	flux = 0;
+      }
+      
+      double conduct = -1.0*flux / slope;
+      fprintf(f,"slope: %g conductivity: %g\n",slope,conduct);
     }
+    fclose(f);
+
   }
 
   // free memory

@@ -4,6 +4,9 @@
 #include <gsl_rng.h>
 #include <math.h>
 
+/* 
+ * Get New Position on the Nanotube
+ */
 int RandomPosBounds(double i[3], double f[3], double *Current,
 		    gsl_rng *rng) {
   double p1 = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
@@ -27,7 +30,7 @@ int RandomPosBounds(double i[3], double f[3], double *Current,
  * their respective upper sides
  */
 int calculate_Bin(double x, double y, double z, int n_bin_side, double side_length) {
-  int xx = x * n_bin_side / side_length; // x / (sidelength/n_bin_side)
+  int xx = x * n_bin_side / side_length; // -> x / (sidelength/n_bin_side)
   int yy = y * n_bin_side / side_length;
   int zz = z * n_bin_side / side_length;
 
@@ -59,8 +62,16 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
 }
 
 /*
- * Next is the new position of the walker, given it's 
- * old position Current and the location of the nanotubes
+ * Performs a Random Walk:
+ * First, check if the walker is already inside a nanotube. 
+ * Either redistribute anywhere on the nanotube, or pop out
+ * of the nanotube
+ *
+ * If the walker wants to get into a nanotube, we check the
+ * probability. If insufficient, the walker stays where it is.
+ * If sufficient, the walker enters the nanotube
+ *
+ * returns 0 if in the matrix, 1 if in a nanotube
  */
 int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3], 
 		double f_N[][3], int *N, double side_length, 
@@ -69,15 +80,18 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
   int in = 0; 
   double theta; double phi;
   double radius = 1.0/9.0;
-  double nanoBarrier = 0.5;
+  // prob. that a walker crosses from the matrix to the nanotube
+  double fm_cn = 0.5;
+  // prob. that a walker crosses from the nanotube to the matrix
+  double fcn_m = 0.5;
 
   double x = Current[0]; double y = Current[1]; double z = Current[2];
 
-  // if in nanotube
+  // if in nanotube, check which nanotube we're in
   int lookup = N[calculate_Bin(x,y,z,fineness*bins,side_length)];
   if (lookup > 0) {
     double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
-    if (prob > nanoBarrier) {
+    if (prob < fcn_m) {
       // redistribute and return
       RandomPosBounds(i_N[lookup-1],f_N[lookup-1],Current,rng);
       return 1;
@@ -98,7 +112,7 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
     double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
     // exits and walker does not get new position if 
     // probability is lacking
-    if (prob < nanoBarrier) {
+    if (prob < fm_cn) {
       return 0;
     }
     else { in = 1;}
@@ -125,53 +139,3 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
 
   return in;  
 }
-
-/*
-int iterate_Random_Walk(double (*Walk)[3], FILE *Nanotube_File, gsl_rng *rng, int iteration, int n_proc,
-			int Times, int Rates, int id, int walks, double side_length, int faces) {
-
-  int i, j, k;
-  double Next[3];
-  if (Rates == 0) {
-    for (i = 0; i < walks; i++) {
-      int x = Times-1;
-      for (j = 0; j < 2*faces; j++) {
-	for (k = 0; k < x; k++) {
-	  Random_Walk(Next, *(Walk + k + j*(x+1) + i*2*faces*(x+1)), rng, Nanotube_File, side_length);
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][0] = Next[0];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][1] = Next[1];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][2] = Next[2];
-	}
-      }
-    }
-  }
-  else if (Rates > 0) {
-    for (i = 0; i < walks; i++) {
-      int x = Times - (id+iteration*n_proc)*walks/Rates - i/Rates - 1;
-      for (j = 0; j < 2*faces; j++) {
-	for (k = 0; k < x; k++) {
-	  Random_Walk(Next, *(Walk + k + j*(x+1) + i*2*faces*(x+1)), rng, Nanotube_File, side_length);
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][0] = Next[0];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][1] = Next[1];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][2] = Next[2];
-	}
-      }
-    }
-  }
-  else {
-    for (i = 0; i < walks; i++) {
-      int x = Times + Rates*(iteration*n_proc*walks + id*walks) + i*Rates - 1;
-      for (j = 0; j < 2*faces; j++) {
-	for (k = 0; k < x; k++) {
-	  Random_Walk(Next, *(Walk + k + j*(x+1) + i*2*faces*(x+1)), rng, Nanotube_File, side_length);	  
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][0] = Next[0];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][1] = Next[1];
-	  Walk[1 + k + j*(x+1) + i*2*faces*(x+1)][2] = Next[2];
-	}
-      }
-    }
-  }
-
-  return 0;
-}
-*/

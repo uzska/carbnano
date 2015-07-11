@@ -4,8 +4,34 @@
 #include <mpi.h>
 #include <gsl_rng.h>
 
-#include "nanotube.h"
 #include "walker.h"
+
+/*
+ * Initialize the nanotube arrays i and f given
+ * the number of nanotubes, their length, diameter, and orientation
+ */
+int getNanotubes(double Itubes[][3], double Ftubes[][3], int ntubes, int diam,
+		 int len, int fineness, int bins, gsl_rng *rng) {
+  int i; int j;
+  int off = len*(1.0)/(bins*fineness);
+
+  for (i = 0; i < ntubes; i++) {
+    double x = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
+    double y = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
+    double z = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
+    for (j = 0; j < diam; j++) {
+      // random initial positions
+      Itubes[i*diam+j][0] = x;
+      Itubes[i*diam+j][1] = y;
+      Itubes[i*diam+j][2] = z;
+      
+      Ftubes[i*diam+j][0] = Itubes[i*diam+j][0];
+      Ftubes[i*diam+j][1] = Itubes[i*diam+j][1] + off;
+      Ftubes[i*diam+j][2] = Itubes[i*diam+j][2];
+    }
+  }
+  return 0;
+}
 
 /*
  * Least Squares Method to Calculate Slope
@@ -80,19 +106,19 @@ int main(int argc, char *argv[]) {
 
   /* World Variables */
   double side_length = 1;
-  int n_bin_side = 10; //per side 
+  int n_bin_side = 50; //per side 
   int faces = n_bin_side*n_bin_side;
   int DIM = 3;
   
   double interval = side_length / ((double)n_bin_side);
-  int fineness = 3; //the much finer the nanotube grid is than the temp bins
+  int fineness = 5; //the much finer the nanotube grid is than the temp bins
 
   /* Times, Rate, and walks  */
-  int Times[] = {20,40};
+  int Times[] = {800,1200,1600};
   int Rate = 1;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 20; // number of different walks each process simulates
+  int walks = 100; // number of different walks each process simulates
   
   /* iterator variables  */
   int i,j,k,p,s;
@@ -142,23 +168,25 @@ int main(int argc, char *argv[]) {
   if (process_id == 0) {
     Total_cs = malloc(sizeof(*Total_cs) * n_bin_side);
   }
+
+  /* RNG */
+  const gsl_rng_type *T = gsl_rng_taus;
+  gsl_rng *rng = gsl_rng_alloc(T);
+  gsl_rng_set(rng, time(NULL)+process_id);
   
   /* Carbon Nanotube Lookup Table */
   int *Nanotubes = calloc(fineness * fineness * 
 			  fineness * n_bin_side * 
 			  n_bin_side * n_bin_side,
 			   sizeof(int));
-  int n_tubes = 1;
+  // initialize the number and orientation of nanotubes  
+  int n_tubes = 0;
+  int tubeLen = 10; // how many grid bins to go across
+  int tubeDiam = 1; // how many grid bins to go across
+  n_tubes *= tubeDiam;
   double i_Nanotubes[n_tubes][DIM];
   double f_Nanotubes[n_tubes][DIM];
-
-  i_Nanotubes[0][0] = 0;
-  i_Nanotubes[0][1] = 0;
-  i_Nanotubes[0][2] = 0;
-
-  f_Nanotubes[0][0] = 0;
-  f_Nanotubes[0][0] = 1;
-  f_Nanotubes[0][0] = 1;
+  getNanotubes(i_Nanotubes,f_Nanotubes,n_tubes,tubeDiam,tubeLen,fineness,n_bin_side,rng);
   
   /* fill in bins between initial and final bins */
   for (i = 0; i < n_tubes; i++) {
@@ -183,11 +211,6 @@ int main(int argc, char *argv[]) {
       x += dx; y += dy; z += dz;
     }
   }
-
-  /* RNG */
-  const gsl_rng_type *T = gsl_rng_taus;
-  gsl_rng *rng = gsl_rng_alloc(T);
-  gsl_rng_set(rng, time(NULL)+process_id);
 
   /* Random Walk, holds only the current position  */  
   double (*Walk)[DIM] = malloc(sizeof(*Walk) * 2 * faces);
@@ -261,7 +284,7 @@ int main(int argc, char *argv[]) {
     for (k = 0; k < len_Times; k++) {
       FILE *g;                                                                                                      
       char name_g[FILENAME_MAX];
-      snprintf(name_g, sizeof(name_g), "output/Totalcs_%d.csv",k);
+      snprintf(name_g, sizeof(name_g), "Totalcs_%d.csv",k);
       g = fopen(name_g,"w");
       
       for (i = 0; i < n_bin_side; i++) {

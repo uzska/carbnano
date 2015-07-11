@@ -13,12 +13,19 @@
 int getNanotubes(double Itubes[][3], double Ftubes[][3], int ntubes, int diam,
 		 int len, int fineness, int bins, gsl_rng *rng) {
   int i; int j;
-  int off = len*(1.0)/(bins*fineness);
+  double off = len*(1.0)/(bins*fineness);
 
   for (i = 0; i < ntubes; i++) {
-    double x = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
-    double y = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
-    double z = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng)) - off;
+    double x = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+    double y = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+    double z = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+    // bounds
+    while (x < 0  || z < 0 ||  y > (1.0-off)) {
+      x = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+      y = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+      z = gsl_rng_get(rng)/(1.0*gsl_rng_max(rng));
+    }
+
     for (j = 0; j < diam; j++) {
       // random initial positions
       Itubes[i*diam+j][0] = x;
@@ -106,7 +113,7 @@ int main(int argc, char *argv[]) {
 
   /* World Variables */
   double side_length = 1;
-  int n_bin_side = 50; //per side 
+  int n_bin_side = 5; //per side 
   int faces = n_bin_side*n_bin_side;
   int DIM = 3;
   
@@ -114,11 +121,11 @@ int main(int argc, char *argv[]) {
   int fineness = 5; //the much finer the nanotube grid is than the temp bins
 
   /* Times, Rate, and walks  */
-  int Times[] = {800,1200,1600};
+  int Times[] = {100};
   int Rate = 1;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 100; // number of different walks each process simulates
+  int walks = 50; // number of different walks each process simulates
   
   /* iterator variables  */
   int i,j,k,p,s;
@@ -180,15 +187,18 @@ int main(int argc, char *argv[]) {
 			  n_bin_side * n_bin_side,
 			   sizeof(int));
   // initialize the number and orientation of nanotubes  
-  int n_tubes = 0;
-  int tubeLen = 10; // how many grid bins to go across
+  int n_tubes = 5;
+  int tubeLen = 3; // how many grid bins to go across
   int tubeDiam = 1; // how many grid bins to go across
   n_tubes *= tubeDiam;
   double i_Nanotubes[n_tubes][DIM];
   double f_Nanotubes[n_tubes][DIM];
+  //double (*i_Nanotubes)[DIM] = malloc(n_tubes * sizeof(*i_Nanotubes));
+  //double (*f_Nanotubes)[DIM] = malloc(n_tubes * sizeof(*f_Nanotubes));
   getNanotubes(i_Nanotubes,f_Nanotubes,n_tubes,tubeDiam,tubeLen,fineness,n_bin_side,rng);
   
-  /* fill in bins between initial and final bins */
+  /* fill in bins between initial and final bins */ 
+  
   for (i = 0; i < n_tubes; i++) {
     // determine the x,y, and z bin numbers
     int x = i_Nanotubes[i][0] * n_bin_side * fineness / side_length;
@@ -201,16 +211,34 @@ int main(int argc, char *argv[]) {
         
     int max = getMax(xx-x,yy-y,zz-z);
 
+    if (max <= 0) {      
+      fprintf(stderr, "nanotube ends are the same");
+      exit(EXIT_FAILURE);
+    }
+
     double dx = (xx - x)/max;
     double dy = (yy - y)/max;
     double dz = (zz - z)/max;
 
-    while (x <= f_Nanotubes[i][0]) {
+    while (x <= xx && y <= yy && z <= zz) {
       int b = x + y*(n_bin_side*fineness)*(n_bin_side*fineness) + z*(n_bin_side);
       Nanotubes[b] = i+1;
       x += dx; y += dy; z += dz;
+      //printf("b: %d val: %d\n",b,Nanotubes[b]);
     }
   }
+
+  /* 
+  //print nanotube table
+  if (process_id == 0) {
+    for (i = 0; i < n_bin_side*n_bin_side*n_bin_side*fineness*fineness*fineness; i++) {
+      printf("%d",Nanotubes[i]);
+      if ((i+1) % 80 == 0) {printf("\n");}
+      //printf("<%g,%g,%g> -> <%g,%g,%g>\n",i_Nanotubes[i][0], i_Nanotubes[i][1],
+      //i_Nanotubes[i][2], f_Nanotubes[i][0],f_Nanotubes[i][1],f_Nanotubes[i][2]);
+    }
+  }
+  */
 
   /* Random Walk, holds only the current position  */  
   double (*Walk)[DIM] = malloc(sizeof(*Walk) * 2 * faces);

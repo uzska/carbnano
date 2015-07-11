@@ -79,7 +79,7 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
 
   int in = 0; 
   double theta; double phi;
-  double radius = 1.0/9.0;
+  double radius = 1.0/5.0;
   // prob. that a walker crosses from the matrix to the nanotube
   double fm_cn = 0.5;
   // prob. that a walker crosses from the nanotube to the matrix

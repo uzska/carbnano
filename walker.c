@@ -79,7 +79,7 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
 
   int in = 0; 
   double theta; double phi;
-  double radius = 1.0/5.0;
+  double radius = 1.0/149.0;
   // prob. that a walker crosses from the matrix to the nanotube
   double fm_cn = 0.5;
   // prob. that a walker crosses from the nanotube to the matrix
@@ -89,7 +89,7 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
 
   // if in nanotube, check which nanotube we're in
   int lookup = N[calculate_Bin(x,y,z,fineness*bins,side_length)];
-  if (lookup > 0) {
+  if (lookup != 0) {
     double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
     if (prob < fcn_m) {
       // redistribute and return
@@ -97,7 +97,7 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
       return 1;
     }
   }
-  
+
   // calculate angles  
   theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI;
   phi = get_phi(Current[1], rng, radius, side_length);
@@ -106,9 +106,15 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
   x += radius*sin(theta)*cos(phi);
   y += radius*sin(theta)*sin(phi);
   z += radius*cos(theta);
+  // periodic boundary conditions
+  if (x > side_length) {x -= side_length;}
+  if (x < 0) {x += side_length;}
+  if (z > side_length) {z -= side_length;}
+  if (z < 0) {z += side_length;}
 
   // check if walker enters nanotube
-  if (N[calculate_Bin(x,y,z,fineness*bins,side_length)] > 0) {
+  lookup = N[calculate_Bin(x,y,z,fineness*bins,side_length)];
+  if (lookup != 0) {
     double prob = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng));
     // exits and walker does not get new position if 
     // probability is lacking

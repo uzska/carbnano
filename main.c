@@ -99,7 +99,7 @@ int getNanotubes(double Itubes[][3], double Ftubes[][3], int ntubes,
 /*
  * Least Squares Method to Calculate Slope
  */
-int computeSlope(int *T, int len_T, int bins, double *slope, double *y_int) {
+int computeSlope(long long int *T, int len_T, int bins, double *slope, double *y_int) {
   int i;
   double X_avg = 0;
   double Y_avg = 0;
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
 
   /* World Variables */
   double side_length = 1;
-  int n_bin_side = 150; //per side 
+  int n_bin_side = 50; //per side 
   int faces = n_bin_side*n_bin_side;
   int DIM = 3;
   
@@ -177,11 +177,11 @@ int main(int argc, char *argv[]) {
   int fineness = 3; //the much finer the nanotube grid is than the temp bins
 
   /* Times, Rate, and walks  */
-  int Times[] = {160};//{5000,10000,15000,20000,25000,30000,35000,40000,45000,50000,55000,60000};
-  int Rate = 1;//3;
+  int Times[] = {100,200,300,400,500,600,700,800,900,1000};
+  int Rate = 1;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 10; // number of different walks each process simulates
+  int walks = 100; // number of different walks each process simulates
   
   /* iterator variables  */
   int i,j,k,m;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Total array */
-  int (*Total_cs)[len_Times] = NULL;
+  long long int (*Total_cs)[len_Times] = NULL;
   if (process_id == 0) {
     Total_cs = malloc(sizeof(*Total_cs) * n_bin_side);
   }
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
 			  n_bin_side * n_bin_side,
 			   sizeof(int));
   // initialize the number and orientation of nanotubes  
-  int n_tubes = 100;
+  int n_tubes = 0;
   int tubeLen = 100; // how many grid bins to go across, must be less than n_bin_side*fineness
   int tubeRad = 3; // how many grid bins to go across
   double (*i_Nanotubes)[DIM]; 
@@ -339,7 +339,7 @@ int main(int argc, char *argv[]) {
    * we have to do Times[m+1]-Times[m] more random walks.
    */
   int bin;
-  int (*SubTotal_cs)[len_Times] = calloc(n_bin_side,sizeof(*SubTotal_cs));
+  long long int (*SubTotal_cs)[len_Times] = calloc(n_bin_side,sizeof(*SubTotal_cs));
 
   for (i = 0; i < walks; i++) {
     // reinitialize Walk array every random walk that we perform
@@ -358,8 +358,8 @@ int main(int argc, char *argv[]) {
 	bin = calculate_Bin(Walk[j][0], Walk[j][1], Walk[j][2], 
 			    n_bin_side, side_length);
 
-	if (j%2==0) {SubTotal_cs[bin/faces][m]++;} 
-	else {SubTotal_cs[bin/faces][m]--;}
+	if (j%2==0) {SubTotal_cs[bin/faces][m] += 1LL;} 
+	else {SubTotal_cs[bin/faces][m] -= 1LL;}
       }
       // get new T to determine how much longer we need to run the 
       // simulation until we record the position
@@ -373,7 +373,7 @@ int main(int argc, char *argv[]) {
   // free memory
   free(Walk);
     
-  MPI_Reduce(SubTotal_cs, Total_cs, n_bin_side*len_Times, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(SubTotal_cs, Total_cs, n_bin_side*len_Times, MPI_LONG_LONG_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     
   // free memory
   free(SubTotal_cs);
@@ -391,8 +391,8 @@ int main(int argc, char *argv[]) {
       g = fopen(name_g,"w");
       
       for (i = 0; i < n_bin_side; i++) {
-	if (i != n_bin_side-1) {fprintf(g,"%d,",Total_cs[i][k]);}
-	else {fprintf(g,"%d",Total_cs[i][k]);}
+	if (i != n_bin_side-1) {fprintf(g,"%lld,",Total_cs[i][k]);}
+	else {fprintf(g,"%lld",Total_cs[i][k]);}
       }
       fclose(g);
 

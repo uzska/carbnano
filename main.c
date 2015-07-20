@@ -177,11 +177,11 @@ int main(int argc, char *argv[]) {
   int fineness = 3; //the much finer the nanotube grid is than the temp bins
 
   /* Times, Rate, and walks  */
-  int Times[] = {100,200,300,400,500,600,700,800,900,1000};
+  int Times[] = {10,20,30,40,50};//{500,1000,1500,2000};
   int Rate = 1;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 100; // number of different walks each process simulates
+  int walks = 50; // number of different walks each process simulates
   
   /* iterator variables  */
   int i,j,k,m;

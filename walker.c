@@ -2,6 +2,7 @@
  * walker.c
  */
 #include <gsl_rng.h>
+#include <gsl_sf_result.h>
 #include <math.h>
 
 /* 
@@ -78,8 +79,9 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
 		int bins, int fineness) {
 
   int in = 0; 
-  double theta; double phi;
-  double radius = 1.0/149.0;
+  // standard deviation
+  double Dm = 1;
+  double sigma = sqrt(2 * Dm);
   // prob. that a walker crosses from the matrix to the nanotube
   double fm_cn = 0.5;
   // prob. that a walker crosses from the nanotube to the matrix
@@ -97,15 +99,36 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
       return 1;
     }
   }
-
+  /*
   // calculate angles  
   theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI;
   phi = get_phi(Current[1], rng, radius, side_length);
+
   
   // potential new positions
   x += radius*sin(theta)*cos(phi);
   y += radius*sin(theta)*sin(phi);
   z += radius*cos(theta);
+  */
+
+  // Random Walk according to a Normal Distribution
+  double s1 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
+  x += sigma / sqrt(3) * gsl_sf_erf(2*s1-1);
+  
+  double s2 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
+  z += sigma / sqrt(3) * gsl_sf_erf(2*s2-1);
+  
+  double s3;
+  while (1) {
+    s3 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
+    
+    if (y + sigma / sqrt(3) * gsl_sf_erf(2*s3-1) >= 0 &&
+	y + sigma / sqrt(3) * gsl_sf_erf(2*s3-1) <= 1) {
+      break;
+    } 
+  }    
+  y += sigma / sqrt(3) * gsl_sf_erf(2*s3-1);
+
   // periodic boundary conditions
   if (x > side_length) {x -= side_length;}
   if (x < 0) {x += side_length;}
@@ -124,6 +147,11 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
     else { in = 1;}
   }
 
+  Current[0] = x;
+  Current[1] = y;
+  Current[2] = z;
+
+  /*
   // update x, y, z
   Current[0] = radius*sin(theta)*cos(phi) + Current[0];
   Current[1] = radius*sin(theta)*sin(phi) + Current[1];
@@ -142,6 +170,6 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
   if (Current[2] < 0) {
     Current[2] += side_length;
   }
-
+  */
   return in;  
 }

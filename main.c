@@ -72,8 +72,18 @@ int getNanotubes(double Itubes[][3], double Ftubes[][3], int ntubes,
 
     // get angles/orientations, make sure final positions 
     // are bigger than initial positions
-    theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI/2;
-    phi = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng)) * M_PI/2;
+
+    // random
+    //theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI/2;
+    //phi = gsl_rng_get(rng) / (1.0*gsl_rng_max(rng)) * M_PI/2;
+
+    // horiz
+    theta = M_PI/2;
+    phi = M_PI/2;
+
+    //vertical
+    //theta = 0;
+    //phi = 0;
 
     // set final positions
     Ftubes[i][0] = Itubes[i][0] + dist*sin(theta)*cos(phi);
@@ -177,11 +187,11 @@ int main(int argc, char *argv[]) {
   int fineness = 3; //the much finer the nanotube grid is than the temp bins
 
   /* Times, Rate, and walks  */
-  int Times[] = {10,20,30,40,50};//{500,1000,1500,2000};
-  int Rate = 1;
+  int Times[] = {500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000};
+  int Rate = -10;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
-  int walks = 50; // number of different walks each process simulates
+  int walks = 60; // number of different walks each process simulates
   
   /* iterator variables  */
   int i,j,k,m;
@@ -241,7 +251,7 @@ int main(int argc, char *argv[]) {
 			  n_bin_side * n_bin_side,
 			   sizeof(int));
   // initialize the number and orientation of nanotubes  
-  int n_tubes = 0;
+  int n_tubes = 350;
   int tubeLen = 100; // how many grid bins to go across, must be less than n_bin_side*fineness
   int tubeRad = 3; // how many grid bins to go across
   double (*i_Nanotubes)[DIM]; 
@@ -353,7 +363,7 @@ int main(int argc, char *argv[]) {
       for (j = 0; j < 2*faces && T >= 0; j++) {
 	for (k = 0; k < T; k++) {
 	  Random_Walk(*(Walk+j),rng,i_Nanotubes,f_Nanotubes,
-		      Nanotubes,side_length,n_bin_side,fineness);
+		      Nanotubes,side_length,tubeRad,tubeLen,n_bin_side,fineness);
 	}	
 	bin = calculate_Bin(Walk[j][0], Walk[j][1], Walk[j][2], 
 			    n_bin_side, side_length);
@@ -381,8 +391,8 @@ int main(int argc, char *argv[]) {
   /* print out cross section totals, slopes, and thermal conductivities */
   
   if (process_id == 0) {
-    FILE *f;
-    f = fopen("results.txt","w");
+    //FILE *f;
+    //f = fopen("results.txt","w");
 
     for (k = 0; k < len_Times; k++) {
       FILE *g;                                                                                                      
@@ -397,6 +407,7 @@ int main(int argc, char *argv[]) {
       fclose(g);
 
       // slope, thermal conductivities
+      /*
       double slope = 0; double y_int;
       computeSlope(&Total_cs[0][k], len_Times, n_bin_side, &slope, &y_int);
       double flux; 
@@ -412,9 +423,10 @@ int main(int argc, char *argv[]) {
       
       double conduct = -1.0*flux / slope;
       fprintf(f,"slope: %g y-int: %g conductivity: %g\n ",slope,y_int,conduct);
+      */
     }
 
-    fclose(f);
+    //fclose(f);
   }
 
   // free memory

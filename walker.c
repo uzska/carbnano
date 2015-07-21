@@ -5,6 +5,45 @@
 #include <gsl_sf_result.h>
 #include <math.h>
 
+/*
+ * Inverse erf
+ */ 
+double erfinv(double x){
+  double z;
+  double a  = 0.147;
+  double the_sign_of_x;
+  if(0==x) {
+    the_sign_of_x = 0;
+  } else if(x>0){
+    the_sign_of_x = 1;
+  } else {
+    the_sign_of_x = -1;
+  }
+
+  // cases for x = 1,-1
+  if (x == 1) {
+    //infinity
+    return INFINITY;
+  }
+  if (x == -1) {
+    //neg infinity
+    return -INFINITY;
+  }
+
+  if(0 != x) {
+    double ln_1minus_x_sqrd = log(1-x*x);
+    double ln_1minusxx_by_a = ln_1minus_x_sqrd / a;
+    double ln_1minusxx_by_2 = ln_1minus_x_sqrd / 2;
+    double ln_etc_by2_plus2 = ln_1minusxx_by_2 + (2/(M_PI * a));
+    double first_sqrt = sqrt((ln_etc_by2_plus2*ln_etc_by2_plus2)-ln_1minusxx_by_a);
+    double second_sqrt = sqrt(first_sqrt - ln_etc_by2_plus2);
+    z = second_sqrt * the_sign_of_x;
+  } else { // x is zero                                                                                                                              
+    z = 0;
+  }
+  return z;
+}
+
 /* 
  * Get New Position on the Nanotube
  */
@@ -48,6 +87,7 @@ int calculate_Bin(double x, double y, double z, int n_bin_side, double side_leng
  * Returns the azemuthal angle phi, and does not allow a walker to exit
  * from the heated sides.
  */
+/*
 double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
   // The walker is getting close to the boundary y=0, so we bounce it back
   if (y < radius) {
@@ -61,6 +101,7 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
     return gsl_rng_get(rng) / (1.0*gsl_rng_max(rng)) * 2 * M_PI;
   }
 }
+*/
 
 /*
  * Performs a Random Walk:
@@ -76,16 +117,26 @@ double get_phi(double y, gsl_rng *rng, double radius, double side_length) {
  */
 int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3], 
 		double f_N[][3], int *N, double side_length, 
+		int radius, int length,
 		int bins, int fineness) {
 
   int in = 0; 
-  // standard deviation
-  double Dm = 1;
-  double sigma = sqrt(2 * Dm);
+
+  double Dm = 0.02; // diffusivity
+  double sigma = sqrt(2 * Dm);   // standard deviation sqrt(2*D_m*delta_t)
+
   // prob. that a walker crosses from the matrix to the nanotube
+  // fm_cn = 4 / pC C_m R_bd
   double fm_cn = 0.5;
   // prob. that a walker crosses from the nanotube to the matrix
-  double fcn_m = 0.5;
+  // fcn_m = sigma A_c / V_c * fm_cn
+  double fcn_m = sigma * fineness * bins * 
+    (2.0 / (1.0*length) + 4.0 / (1.0*radius)) * fm_cn;
+
+  // sa / vol = 2*pi radius^2  + 2 pi radius length / pi radius^2 length
+  // 2 /length + 2/radius
+  // 2 * radius^2 + 4 * length*radius / radius^2 * length
+  // 2/length + 4/radius
 
   double x = Current[0]; double y = Current[1]; double z = Current[2];
 
@@ -99,35 +150,25 @@ int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3],
       return 1;
     }
   }
-  /*
-  // calculate angles  
-  theta = (gsl_rng_get(rng) / (1.0*gsl_rng_max(rng))) * M_PI;
-  phi = get_phi(Current[1], rng, radius, side_length);
 
-  
-  // potential new positions
-  x += radius*sin(theta)*cos(phi);
-  y += radius*sin(theta)*sin(phi);
-  z += radius*cos(theta);
-  */
-
-  // Random Walk according to a Normal Distribution
+  // Random Walk according to a Normal Distribution,
+  // potential new positions x y z
   double s1 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
-  x += sigma / sqrt(3) * gsl_sf_erf(2*s1-1);
+  x += sigma / sqrt(3) * erfinv(2*s1-1);
   
   double s2 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
-  z += sigma / sqrt(3) * gsl_sf_erf(2*s2-1);
+  z += sigma / sqrt(3) * erfinv(2*s2-1);
   
   double s3;
   while (1) {
     s3 = gsl_rng_get(rng) / (1.0 *gsl_rng_max(rng));
     
-    if (y + sigma / sqrt(3) * gsl_sf_erf(2*s3-1) >= 0 &&
-	y + sigma / sqrt(3) * gsl_sf_erf(2*s3-1) <= 1) {
+    if (y + sigma / sqrt(3) * erfinv(2*s3-1) >= 0 &&
+	y + sigma / sqrt(3) * erfinv(2*s3-1) <= 1) {
       break;
     } 
   }    
-  y += sigma / sqrt(3) * gsl_sf_erf(2*s3-1);
+  y += sigma / sqrt(3) * erfinv(2*s3-1);
 
   // periodic boundary conditions
   if (x > side_length) {x -= side_length;}

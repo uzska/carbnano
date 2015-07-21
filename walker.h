@@ -5,7 +5,8 @@
  * Updates the position by performing a random walk
  */
 int Random_Walk(double *Current, gsl_rng *rng, double i_N[][3], double f_N[][3],
-		int *N, double side_length,int bins, int fineness);
+		int *N, double side_length, int radius, int length, 
+		int bins, int fineness);
 
 /*
  * Returns a value for phi, which depends on the Current y-value,

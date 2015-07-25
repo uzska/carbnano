@@ -1,0 +1,2 @@
+mpicc -I/usr/include/gsl -L/usr/local/lib main.c walker.c -o main -lgsl -lgslcblas -lm
+gcc -I/usr/include/gsl -L/usr/local/lib nanotube.c -o nanotube -lgsl -lgslcblas -lm

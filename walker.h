@@ -3,7 +3,7 @@
 
 
 int RandomWalk(double *Current, gsl_rng *rng, int *N, 
-	       double (*iN)[3], double (*fN)[3], int length, int radius,
+	       int (*iN)[3], int (*fN)[3], int length, int radius,
 	       int fineness, int bins);
 
 int calculateBin(double x, double y, double z, int bins);

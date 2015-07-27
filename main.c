@@ -7,111 +7,6 @@
 #include <time.h>
 #include "walker.h"
 /*
-int outofBounds(double xi, double yi, double zi, 
-		double xf, double yf, double zf, 
-		int bins, int fineness, int rad) {
-
-  double off = (rad*1.0) / (bins*fineness);
-  if ((xi-off) < 0 || (xi + off) > 1.0) {return 1;}
-  if ((yi-off) < 0 || (yi + off) > 1.0) {return 1;}
-  if ((zi-off) < 0 || (zi + off) > 1.0) {return 1;}  
-
-  if ((xf-off) < 0 || (xf + off) > 1.0) {return 1;}
-  if ((yf-off) < 0 || (yf + off) > 1.0) {return 1;}
-  if ((zf-off) < 0 || (zf + off) > 1.0) {return 1;}
-
-  return 0;
-}
-
-int intersects(int x1, int y1, int z1,
-	       int x2, int y2, int z2,
-	       double Itubes[][3], double Ftubes[][3],
-	       int tubes, int bins, int fineness, int rad) {
-  int i;
-  int intersect = 0;
-  for (i = 0; i < tubes; i++) {
-    if ((x1 >= (int)(Itubes[i][0]*bins*fineness - rad) && 
-	x1 <= (int)(Ftubes[i][0]*bins*fineness + rad)) ||
-	(x2 >= (int)(Itubes[i][0]*bins*fineness - rad) && 
-	 x2 <= (int)(Ftubes[i][0]*bins*fineness + rad)) ) {
-      intersect = 1;
-    } else {return 0;}
-    if ((y1 >= (int)(Itubes[i][1]*bins*fineness - rad) && 
-	y1 <= (int)(Ftubes[i][1]*bins*fineness + rad)) ||
-	(y2 >= (int)(Itubes[i][1]*bins*fineness - rad) && 
-	 y2 <= (int)(Ftubes[i][1]*bins*fineness + rad)) ) {
-      intersect = 1;
-    } else {return 0;}
-    if ((z1 >= (int)(Itubes[i][2]*bins*fineness - rad) && 
-	z1 <= (int)(Ftubes[i][2]*bins*fineness + rad)) ||
-	(z2 >= (int)(Itubes[i][2]*bins*fineness - rad) && 
-	 z2 <= (int)(Ftubes[i][2]*bins*fineness + rad)) ) {
-      intersect = 1;
-    } else {return 0;}
-  }
-  return intersect;
-}
-
-int getNanotubes(double Itubes[][3], double Ftubes[][3], int ntubes, 
-		 int rad, int len, int fineness, int bins, gsl_rng *rng) {
-  int i; int j;
-  double dist = (len*1.0)/(bins*fineness);
-
-  double phi; 
-  double theta;
-  double x1,y1,z1;
-  double x2,y2,z2;
-  int xx1,yy1,zz1;
-  int xx2,yy2,zz2;
-
-  for (i = 0; i < ntubes; i++) {
-    
-    // get angles/orientations
-
-    // random
-    theta = gsl_rng_uniform(rng) * M_PI;
-    phi = gsl_rng_uniform(rng) * 2*M_PI;
-
-    // horiz
-    //theta = M_PI/2;
-    //phi = M_PI/2;
-
-    //vertical
-    //theta = 0;
-    //phi = 0;
-
-    // pick new random nanotube start locations
-    x1 = gsl_rng_uniform(rng); xx1 = x1 * fineness * bins;
-    y1 = gsl_rng_uniform(rng); yy1 = y1 * fineness * bins;
-    z1 = gsl_rng_uniform(rng); zz1 = z1 * fineness * bins;
-
-    // set final positions
-    x2 = x1 + dist*sin(theta)*cos(phi); xx2 = x2 * fineness * bins;
-    y2 = y1 + dist*sin(theta)*sin(phi); yy2 = y2 * fineness * bins;
-    z2 = z1 + dist*cos(theta);          zz2 = z2 * fineness * bins;
-
-    // bounds, reset nanotube positions if necessary
-    while (outofBounds(x1,y1,z1,x2,y2,z2,bins,fineness,rad) ||
-	   intersects(xx1,yy1,zz1,xx2,yy2,zz2,
-		      Itubes,Ftubes,i,bins,fineness,rad)) {
-      x1 = gsl_rng_uniform(rng);
-      y1 = gsl_rng_uniform(rng);
-      z1 = gsl_rng_uniform(rng);
-      x2 = x1 + dist*sin(theta)*cos(phi);
-      y2 = y1 + dist*sin(theta)*sin(phi);
-      z2 = z1 + dist*cos(theta);
-    }
-    
-    if (x1 < x2) {Itubes[i][0] = x1; Ftubes[i][0] = x2;}
-    else {Ftubes[i][0] = x1; Itubes[i][0] = x2;}
-    if (y1 < y2) {Itubes[i][1] = y1; Ftubes[i][1] = y2;}
-    else {Ftubes[i][1] = y1; Itubes[i][1] = y2;}
-    if (z1 < z2) {Itubes[i][2] = z1; Ftubes[i][2] = z2;}
-    else {Ftubes[i][2] = z1; Itubes[i][2] = z2;}
-
-  }
-  return 0;
-}
 */
 
 int getMax(int x, int y, int z) {
@@ -157,9 +52,9 @@ int main(int argc, char *argv[]) {
   int bins = 50;
   int faces = bins*bins;
   int fineness = 3;
-  int Times[] = {200,400,600,800,1000,1200,1400,1600,1800,2000};
+  int Times[] = {800};
   int Rate = 1;
-  int walks = 125;
+  int walks = 400;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
   int i,j,k,m;
@@ -213,14 +108,61 @@ int main(int argc, char *argv[]) {
   int tubeLen = 4;
   int tubeRad = 2;
   /* End of the Nanotubes */
-  double (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
-  double (*fNano)[3] = malloc(ntubes * sizeof(*fNano));
+  //double (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
+  //double (*fNano)[3] = malloc(ntubes * sizeof(*fNano));
+  int (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
+  int (*fNano)[3] = malloc(ntubes * sizeof(*fNano));
+
   //getNanotubes(iNano,fNano,ntubes,tubeRad,tubeLen,fineness,bins,rng);
 
   /* manually set nanotube ends */
+  if (ntubes) {    
+    iNano[0][0] = 108; iNano[0][1] = 93; iNano[0][2] = 129;
+    fNano[0][0] = 110; fNano[0][1] = 95; fNano[0][2] = 133;
+    iNano[1][0] = 83; iNano[1][1] = 105; iNano[1][2] = 134;
+    fNano[1][0] = 83; fNano[1][1] = 109; fNano[1][2] = 136;
+    iNano[2][0] = 54; iNano[2][1] = 23; iNano[2][2] = 141;
+    fNano[2][0] = 57; fNano[2][1] = 23; fNano[2][2] = 144;
+    iNano[3][0] = 17; iNano[3][1] = 47; iNano[3][2] = 74;
+    fNano[3][0] = 20; fNano[3][1] = 50; fNano[3][2] = 74;
+    iNano[4][0] = 73; iNano[4][1] = 84; iNano[4][2] = 34;
+    fNano[4][0] = 74; fNano[4][1] = 88; fNano[4][2] = 35;
+    iNano[5][0] = 71; iNano[5][1] = 63; iNano[5][2] = 32;
+    fNano[5][0] = 72; fNano[5][1] = 66; fNano[5][2] = 35;
+    iNano[6][0] = 56; iNano[6][1] = 52; iNano[6][2] = 95;
+    fNano[6][0] = 57; fNano[6][1] = 56; fNano[6][2] = 97;
+    iNano[7][0] = 135; iNano[7][1] = 69; iNano[7][2] = 91;
+    fNano[7][0] = 136; fNano[7][1] = 72; fNano[7][2] = 93;
+    iNano[8][0] = 51; iNano[8][1] = 35; iNano[8][2] = 71;
+    fNano[8][0] = 52; fNano[8][1] = 36; fNano[8][2] = 74;
+    iNano[9][0] = 4; iNano[9][1] = 9; iNano[9][2] = 127;
+    fNano[9][0] = 7; fNano[9][1] = 10; fNano[9][2] = 130;
+    iNano[10][0] = 133; iNano[10][1] = 57; iNano[10][2] = 56;
+    fNano[10][0] = 134; fNano[10][1] = 57; fNano[10][2] = 60;
+    iNano[11][0] = 59; iNano[11][1] = 138; iNano[11][2] = 122;
+    fNano[11][0] = 63; fNano[11][1] = 139; fNano[11][2] = 123;
+    iNano[12][0] = 56; iNano[12][1] = 95; iNano[12][2] = 24;
+    fNano[12][0] = 57; fNano[12][1] = 96; fNano[12][2] = 27;
+    iNano[13][0] = 15; iNano[13][1] = 58; iNano[13][2] = 45;
+    fNano[13][0] = 15; fNano[13][1] = 61; fNano[13][2] = 48;
+    iNano[14][0] = 117; iNano[14][1] = 6; iNano[14][2] = 65;
+    fNano[14][0] = 120; fNano[14][1] = 9; fNano[14][2] = 66;
+    iNano[15][0] = 126; iNano[15][1] = 102; iNano[15][2] = 73;
+    fNano[15][0] = 127; fNano[15][1] = 103; fNano[15][2] = 76;
+    iNano[16][0] = 32; iNano[16][1] = 42; iNano[16][2] = 80;
+    fNano[16][0] = 35; fNano[16][1] = 45; fNano[16][2] = 81;
+    iNano[17][0] = 127; iNano[17][1] = 76; iNano[17][2] = 72;
+    fNano[17][0] = 127; fNano[17][1] = 76; fNano[17][2] = 76;
+    iNano[18][0] = 118; iNano[18][1] = 124; iNano[18][2] = 94;
+    fNano[18][0] = 120; fNano[18][1] = 127; fNano[18][2] = 96;
+    iNano[19][0] = 137; iNano[19][1] = 80; iNano[19][2] = 40;
+    fNano[19][0] = 140; fNano[19][1] = 82; fNano[19][2] = 43;
+  }
+  /* manually set nanotube ends */
 
   for (i = 0; i < ntubes; i++) {
-    // determine the x,y, and z bin numbers
+    // determine the x,y, and z bin numbers 
+    /*
     int x = iNano[i][0] * bins * fineness;
     int y = iNano[i][1] * bins * fineness;
     int z = iNano[i][2] * bins * fineness;
@@ -228,20 +170,29 @@ int main(int argc, char *argv[]) {
     int xx = fNano[i][0] * bins * fineness;
     int yy = fNano[i][1] * bins * fineness;
     int zz = fNano[i][2] * bins * fineness;
+    */
+    double x = iNano[i][0];
+    double y = iNano[i][1];
+    double z = iNano[i][2];
     
+    double xx = fNano[i][0];
+    double yy = fNano[i][1];
+    double zz = fNano[i][2];
+
     int max = getMax(xx-x,yy-y,zz-z);
     
-    //printf("<%d,%d,%d> <%d,%d,%d>\n",x,y,z,xx,yy,zz);
+    //printf("<%g,%g,%g> <%g,%g,%g>\n",x,y,z,xx,yy,zz);
     
     if (max <= 0) {      
       fprintf(stderr, "nanotube ends are the same");
       exit(EXIT_FAILURE);
     }
     
+
     double dx = (xx - x)/max;
     double dy = (yy - y)/max;
     double dz = (zz - z)/max;
-    
+
     while (x <= xx && y <= yy && z <= zz) {
       // go through rad
       for (j = 1; j < tubeRad; j++) {
@@ -275,7 +226,13 @@ int main(int argc, char *argv[]) {
     Total = malloc(sizeof(*Total) * bins);
   }
   /* (sub)Total walker array held by each process */
-  long long int (*SubTotal)[len_Times] = calloc(bins,sizeof(*SubTotal));
+  //long long int (*SubTotal)[len_Times] = calloc(bins,sizeof(*SubTotal));
+  long long int (*SubTotal)[len_Times] = malloc(bins  * sizeof(*SubTotal));
+  for (i = 0; i < len_Times; ++i) {
+    for (j = 0; j < bins; ++j) {
+      SubTotal[j][i] = 0LL;
+    }
+  }
 
   /* 
    * Random Walk algorithm--simutlates heat flux by offsetting
@@ -336,11 +293,10 @@ int main(int argc, char *argv[]) {
       }
       fclose(g);
     }
+    // free memory
+    free(Total);
   }
 
-  // free memory
-  free(Total);
-  
   MPI_Finalize();
   return 0;
 }

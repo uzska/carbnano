@@ -21,11 +21,12 @@ int outofBounds(double xi, double yi, double zi,
 
 int intersects(int x1, int y1, int z1,
 	       int x2, int y2, int z2,
-	       double Itubes[][3], double Ftubes[][3],
+	       int Itubes[][3], int Ftubes[][3],
 	       int tubes, int bins, int fineness, int rad) {
   int i;
   int intersect = 0;
   for (i = 0; i < tubes; i++) {
+    /*
     if ((x1 >= (int)(Itubes[i][0]*bins*fineness - rad) && 
 	x1 <= (int)(Ftubes[i][0]*bins*fineness + rad)) ||
 	(x2 >= (int)(Itubes[i][0]*bins*fineness - rad) && 
@@ -44,11 +45,31 @@ int intersects(int x1, int y1, int z1,
 	 z2 <= (int)(Ftubes[i][2]*bins*fineness + rad)) ) {
       intersect = 1;
     } else {return 0;}
+    */
+    if ((x1 >= (int)(Itubes[i][0] - rad) && 
+	x1 <= (int)(Ftubes[i][0] + rad)) ||
+	(x2 >= (int)(Itubes[i][0] - rad) && 
+	 x2 <= (int)(Ftubes[i][0] + rad)) ) {
+      intersect = 1;
+    } else {return 0;}
+    if ((y1 >= (int)(Itubes[i][1] - rad) && 
+	y1 <= (int)(Ftubes[i][1] + rad)) ||
+	(y2 >= (int)(Itubes[i][1] - rad) && 
+	 y2 <= (int)(Ftubes[i][1] + rad)) ) {
+      intersect = 1;
+    } else {return 0;}
+    if ((z1 >= (int)(Itubes[i][2] - rad) && 
+	z1 <= (int)(Ftubes[i][2] + rad)) ||
+	(z2 >= (int)(Itubes[i][2] - rad) && 
+	 z2 <= (int)(Ftubes[i][2] + rad)) ) {
+      intersect = 1;
+    } else {return 0;}
+
   }
   return intersect;
 }
 
-int getNanotubes(FILE *f, double Itubes[][3], double Ftubes[][3], int ntubes, 
+int getNanotubes(FILE *f, int Itubes[][3], int Ftubes[][3], int ntubes, 
 		 int rad, int len, int fineness, int bins, gsl_rng *rng) {
   int i; int j;
   double dist = (len*1.0)/(bins*fineness);
@@ -88,27 +109,30 @@ int getNanotubes(FILE *f, double Itubes[][3], double Ftubes[][3], int ntubes,
 
     // bounds, reset nanotube positions if necessary
     while (outofBounds(x1,y1,z1,x2,y2,z2,bins,fineness,rad) ||
+	   (getMax(abs(xx1-xx2),abs(yy1-yy2),abs(zz1-zz2)) == 0) ||
 	   intersects(xx1,yy1,zz1,xx2,yy2,zz2,
 		      Itubes,Ftubes,i,bins,fineness,rad)) {
-      x1 = gsl_rng_uniform(rng);
-      y1 = gsl_rng_uniform(rng);
-      z1 = gsl_rng_uniform(rng);
-      x2 = x1 + dist*sin(theta)*cos(phi);
-      y2 = y1 + dist*sin(theta)*sin(phi);
-      z2 = z1 + dist*cos(theta);
+      // set initial positions
+      x1 = gsl_rng_uniform(rng); xx1 = x1 * fineness * bins;
+      y1 = gsl_rng_uniform(rng); yy1 = y1 * fineness * bins;
+      z1 = gsl_rng_uniform(rng); zz1 = z1 * fineness * bins;
+      // set final positions
+      x2 = x1 + dist*sin(theta)*cos(phi); xx2 = x2 * fineness * bins;
+      y2 = y1 + dist*sin(theta)*sin(phi); yy2 = y2 * fineness * bins;
+      z2 = z1 + dist*cos(theta);          zz2 = z2 * fineness * bins;
     }
     
-    if (x1 < x2) {Itubes[i][0] = x1; Ftubes[i][0] = x2;}
-    else {Ftubes[i][0] = x1; Itubes[i][0] = x2;}
-    if (y1 < y2) {Itubes[i][1] = y1; Ftubes[i][1] = y2;}
-    else {Ftubes[i][1] = y1; Itubes[i][1] = y2;}
-    if (z1 < z2) {Itubes[i][2] = z1; Ftubes[i][2] = z2;}
-    else {Ftubes[i][2] = z1; Itubes[i][2] = z2;}
+    if (xx1 < xx2) {Itubes[i][0] = xx1; Ftubes[i][0] = xx2;}
+    else {Ftubes[i][0] = xx1; Itubes[i][0] = xx2;}
+    if (yy1 < yy2) {Itubes[i][1] = yy1; Ftubes[i][1] = yy2;}
+    else {Ftubes[i][1] = yy1; Itubes[i][1] = yy2;}
+    if (zz1 < zz2) {Itubes[i][2] = zz1; Ftubes[i][2] = zz2;}
+    else {Ftubes[i][2] = zz1; Itubes[i][2] = zz2;}
 
-    fprintf(f,"iNano[i][0] = %g; iNano[i][1] = %g; iNano[i][2] = %g;\n",
-	    Itubes[i][0],Itubes[i][1],Itubes[i][2]);
-    fprintf(f,"fNano[i][0] = %g; fNano[i][1] = %g; fNano[i][2] = %g;\n",
-	    Ftubes[i][0],Ftubes[i][1],Ftubes[i][2]);
+    fprintf(f,"iNano[%d][0] = %d; iNano[%d][1] = %d; iNano[%d][2] = %d;\n",
+	    i,Itubes[i][0],i,Itubes[i][1],i,Itubes[i][2]);
+    fprintf(f,"fNano[%d][0] = %d; fNano[%d][1] = %d; fNano[%d][2] = %d;\n",
+	    i,Ftubes[i][0],i,Ftubes[i][1],i,Ftubes[i][2]);
 
   }
   fclose(f);
@@ -140,8 +164,8 @@ int main(int argc, char *argv[]) {
   int tubeLen = 4;
   int tubeRad = 2;
   /* End of the Nanotubes */
-  double (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
-  double (*fNano)[3] = malloc(ntubes * sizeof(*fNano));
+  int (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
+  int (*fNano)[3] = malloc(ntubes * sizeof(*fNano));
   getNanotubes(f,iNano,fNano,ntubes,tubeRad,tubeLen,fineness,bins,rng);
 
   return 0;

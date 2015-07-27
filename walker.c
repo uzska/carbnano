@@ -8,7 +8,7 @@
 /* 
  * Get New Position on the Nanotube
  */
-int Redistribute(double i[3], double f[3], double *Current,
+int Redistribute(int i[3], int f[3], double *Current,
 		 int radius, int fineness, int bins, gsl_rng *rng) {
   double p1 = gsl_rng_uniform(rng);
   double p2 = gsl_rng_uniform(rng);
@@ -22,10 +22,16 @@ int Redistribute(double i[3], double f[3], double *Current,
   if (i[1] < f[1]) {y1 = i[1]; y2 = f[1];} else {y1 = f[1]; y2 = i[1];} 
   if (i[2] < f[2]) {z1 = i[2]; z2 = f[2];} else {z1 = f[2]; z2 = i[2];} 
 
+  /*
   Current[0] = x1 - off + p1*(x2 - x1 + 2.0*off);
   Current[1] = y1 - off + p1*(y2 - y1 + 2.0*off); 
   Current[2] = z1 - off + p1*(z2 - z1 + 2.0*off);
-  
+  */
+
+  Current[0] = (1.0*x1)/(bins*fineness) + p1 * ((1.0*x2)/(bins*fineness) - (1.0*x1)/(bins*fineness));
+  Current[1] = (1.0*y1)/(bins*fineness) + p1 * ((1.0*y2)/(bins*fineness) - (1.0*y1)/(bins*fineness));
+  Current[2] = (1.0*z1)/(bins*fineness) + p1 * ((1.0*z2)/(bins*fineness) - (1.0*z1)/(bins*fineness));
+
   return 0;
 }
 
@@ -65,10 +71,10 @@ int calculateBin(double x, double y, double z, int bins) {
  * returns 0 if in the matrix, 1 if in a nanotube
  */
 int RandomWalk(double *Current, gsl_rng *rng, int *N,
-	       double (*iN)[3], double (*fN)[3], int length, int radius,
+	       int (*iN)[3], int (*fN)[3], int length, int radius,
 	       int fineness, int bins) {
   int in = 0; 
-  double Dm = 0.02; // diffusivity
+  double Dm = 0.0141421; // diffusivity
   double sigma = sqrt(2 * Dm);   // standard deviation sqrt(2*D_m*delta_t)
   double fm_cn = 0.5;
   double fcn_m = sigma * fineness * bins * 

@@ -74,9 +74,10 @@ int RandomWalk(double *Current, gsl_rng *rng, int *N,
 	       int (*iN)[3], int (*fN)[3], int length, int radius,
 	       int fineness, int bins) {
   int in = 0; 
-  double Dm = 0.0141421; // diffusivity
+  double Dm = 0.0002; // diffusivity
   double sigma = sqrt(2 * Dm);   // standard deviation sqrt(2*D_m*delta_t)
-  double fm_cn = 0.5;
+  // sigma = 0.02
+  double fm_cn = 1.0;
   double fcn_m = sigma * fineness * bins * 
     (2.0/(1.0*length)+ 4.0/(1.0*radius)) * fm_cn;
 

@@ -86,12 +86,12 @@ int getNanotubes(FILE *f, int Itubes[][3], int Ftubes[][3], int ntubes,
     // get angles/orientations
 
     // random
-    theta = gsl_rng_uniform(rng) * M_PI;
-    phi = gsl_rng_uniform(rng) * 2*M_PI;
+    //theta = gsl_rng_uniform(rng) * M_PI;
+    //phi = gsl_rng_uniform(rng) * 2*M_PI;
 
     // horiz
-    //theta = M_PI/2;
-    //phi = M_PI/2;
+    theta = M_PI/2;
+    phi = M_PI/2;
 
     //vertical
     //theta = 0;
@@ -160,8 +160,8 @@ int main(int argc, char *argv[]) {
   gsl_rng_set(rng, time(NULL));  
 
   /* Nanotube variables  */
-  int ntubes = 20;
-  int tubeLen = 4;
+  int ntubes = 12;
+  int tubeLen = 15;
   int tubeRad = 2;
   /* End of the Nanotubes */
   int (*iNano)[3] = malloc(ntubes * sizeof(*iNano));

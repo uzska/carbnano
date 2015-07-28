@@ -52,9 +52,9 @@ int main(int argc, char *argv[]) {
   int bins = 50;
   int faces = bins*bins;
   int fineness = 3;
-  int Times[] = {800};
+  int Times[] = {100,200,300,400,500,600,700,800,900,1000,1100,1200};//{5,50,100,200,300};
   int Rate = 1;
-  int walks = 400;
+  int walks = 600;
   int len_Times = sizeof(Times)/sizeof(Times[0]);
 
   int i,j,k,m;
@@ -104,8 +104,8 @@ int main(int argc, char *argv[]) {
 			  fineness * bins *
 			  fineness * bins, sizeof(int));
   /* Nanotube variables  */
-  int ntubes = 20;
-  int tubeLen = 4;
+  int ntubes = 12;
+  int tubeLen = 15;
   int tubeRad = 2;
   /* End of the Nanotubes */
   //double (*iNano)[3] = malloc(ntubes * sizeof(*iNano));
@@ -117,46 +117,31 @@ int main(int argc, char *argv[]) {
 
   /* manually set nanotube ends */
   if (ntubes) {    
-    iNano[0][0] = 108; iNano[0][1] = 93; iNano[0][2] = 129;
-    fNano[0][0] = 110; fNano[0][1] = 95; fNano[0][2] = 133;
-    iNano[1][0] = 83; iNano[1][1] = 105; iNano[1][2] = 134;
-    fNano[1][0] = 83; fNano[1][1] = 109; fNano[1][2] = 136;
-    iNano[2][0] = 54; iNano[2][1] = 23; iNano[2][2] = 141;
-    fNano[2][0] = 57; fNano[2][1] = 23; fNano[2][2] = 144;
-    iNano[3][0] = 17; iNano[3][1] = 47; iNano[3][2] = 74;
-    fNano[3][0] = 20; fNano[3][1] = 50; fNano[3][2] = 74;
-    iNano[4][0] = 73; iNano[4][1] = 84; iNano[4][2] = 34;
-    fNano[4][0] = 74; fNano[4][1] = 88; fNano[4][2] = 35;
-    iNano[5][0] = 71; iNano[5][1] = 63; iNano[5][2] = 32;
-    fNano[5][0] = 72; fNano[5][1] = 66; fNano[5][2] = 35;
-    iNano[6][0] = 56; iNano[6][1] = 52; iNano[6][2] = 95;
-    fNano[6][0] = 57; fNano[6][1] = 56; fNano[6][2] = 97;
-    iNano[7][0] = 135; iNano[7][1] = 69; iNano[7][2] = 91;
-    fNano[7][0] = 136; fNano[7][1] = 72; fNano[7][2] = 93;
-    iNano[8][0] = 51; iNano[8][1] = 35; iNano[8][2] = 71;
-    fNano[8][0] = 52; fNano[8][1] = 36; fNano[8][2] = 74;
-    iNano[9][0] = 4; iNano[9][1] = 9; iNano[9][2] = 127;
-    fNano[9][0] = 7; fNano[9][1] = 10; fNano[9][2] = 130;
-    iNano[10][0] = 133; iNano[10][1] = 57; iNano[10][2] = 56;
-    fNano[10][0] = 134; fNano[10][1] = 57; fNano[10][2] = 60;
-    iNano[11][0] = 59; iNano[11][1] = 138; iNano[11][2] = 122;
-    fNano[11][0] = 63; fNano[11][1] = 139; fNano[11][2] = 123;
-    iNano[12][0] = 56; iNano[12][1] = 95; iNano[12][2] = 24;
-    fNano[12][0] = 57; fNano[12][1] = 96; fNano[12][2] = 27;
-    iNano[13][0] = 15; iNano[13][1] = 58; iNano[13][2] = 45;
-    fNano[13][0] = 15; fNano[13][1] = 61; fNano[13][2] = 48;
-    iNano[14][0] = 117; iNano[14][1] = 6; iNano[14][2] = 65;
-    fNano[14][0] = 120; fNano[14][1] = 9; fNano[14][2] = 66;
-    iNano[15][0] = 126; iNano[15][1] = 102; iNano[15][2] = 73;
-    fNano[15][0] = 127; fNano[15][1] = 103; fNano[15][2] = 76;
-    iNano[16][0] = 32; iNano[16][1] = 42; iNano[16][2] = 80;
-    fNano[16][0] = 35; fNano[16][1] = 45; fNano[16][2] = 81;
-    iNano[17][0] = 127; iNano[17][1] = 76; iNano[17][2] = 72;
-    fNano[17][0] = 127; fNano[17][1] = 76; fNano[17][2] = 76;
-    iNano[18][0] = 118; iNano[18][1] = 124; iNano[18][2] = 94;
-    fNano[18][0] = 120; fNano[18][1] = 127; fNano[18][2] = 96;
-    iNano[19][0] = 137; iNano[19][1] = 80; iNano[19][2] = 40;
-    fNano[19][0] = 140; fNano[19][1] = 82; fNano[19][2] = 43;
+iNano[0][0] = 122; iNano[0][1] = 62; iNano[0][2] = 112;
+fNano[0][0] = 122; fNano[0][1] = 77; fNano[0][2] = 112;
+iNano[1][0] = 86; iNano[1][1] = 127; iNano[1][2] = 139;
+fNano[1][0] = 86; fNano[1][1] = 142; fNano[1][2] = 139;
+iNano[2][0] = 21; iNano[2][1] = 104; iNano[2][2] = 77;
+fNano[2][0] = 21; fNano[2][1] = 119; fNano[2][2] = 77;
+iNano[3][0] = 27; iNano[3][1] = 101; iNano[3][2] = 69;
+fNano[3][0] = 27; fNano[3][1] = 116; fNano[3][2] = 69;
+iNano[4][0] = 24; iNano[4][1] = 104; iNano[4][2] = 28;
+fNano[4][0] = 24; fNano[4][1] = 119; fNano[4][2] = 28;
+iNano[5][0] = 39; iNano[5][1] = 117; iNano[5][2] = 125;
+fNano[5][0] = 39; fNano[5][1] = 132; fNano[5][2] = 125;
+iNano[6][0] = 99; iNano[6][1] = 97; iNano[6][2] = 55;
+fNano[6][0] = 99; fNano[6][1] = 112; fNano[6][2] = 55;
+iNano[7][0] = 33; iNano[7][1] = 13; iNano[7][2] = 42;
+fNano[7][0] = 33; fNano[7][1] = 28; fNano[7][2] = 42;
+iNano[8][0] = 119; iNano[8][1] = 81; iNano[8][2] = 25;
+fNano[8][0] = 119; fNano[8][1] = 96; fNano[8][2] = 25;
+iNano[9][0] = 50; iNano[9][1] = 45; iNano[9][2] = 138;
+fNano[9][0] = 50; fNano[9][1] = 60; fNano[9][2] = 138;
+iNano[10][0] = 71; iNano[10][1] = 74; iNano[10][2] = 69;
+fNano[10][0] = 71; fNano[10][1] = 89; fNano[10][2] = 69;
+iNano[11][0] = 9; iNano[11][1] = 96; iNano[11][2] = 70;
+fNano[11][0] = 9; fNano[11][1] = 111; fNano[11][2] = 70;
+
   }
   /* manually set nanotube ends */
 
@@ -195,9 +180,9 @@ int main(int argc, char *argv[]) {
 
     while (x <= xx && y <= yy && z <= zz) {
       // go through rad
-      for (j = 1; j < tubeRad; j++) {
-	for (k = 1; k < tubeRad; k++) {
-	  for (m = 1; m < tubeRad; m++) {
+      for (j = 0; j < tubeRad; j++) {
+	for (k = 0; k < tubeRad; k++) {
+	  for (m = 0; m < tubeRad; m++) {
 	    int b = (x+j) + (y+k)*(bins*fineness)*(bins*fineness) +
 	      (z+m)*(bins*fineness);
 	    Nanotubes[b] = i+1;
@@ -205,9 +190,9 @@ int main(int argc, char *argv[]) {
 	}
       }
 
-      for (j = 1; j < tubeRad; j++) {
-	for (k = 1; k < tubeRad; k++) {
-	  for (m = 1; m < tubeRad; m++) {
+      for (j = 0; j < tubeRad; j++) {
+	for (k = 0; k < tubeRad; k++) {
+	  for (m = 0; m < tubeRad; m++) {
 	    int b = (x-j) + (y-k)*(bins*fineness)*(bins*fineness) + 
 	      (z-m)*(bins*fineness);
 	    Nanotubes[b] = i+1;
